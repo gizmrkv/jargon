@@ -199,8 +199,7 @@ def _run_signaling(
     epoch, elapsed_time = trainer.run()
     print(f"Epoch: {epoch}, Elapsed time: {elapsed_time:0.2f} seconds")
 
-    metrics = {"epoch": epoch}
-    metrics |= {
+    metrics = {
         f"train/{k}": v
         for k, v in metrics_fn(game(train_dataset, train_dataset)).items()
     }

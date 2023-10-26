@@ -209,8 +209,7 @@ def _run_supervised_pg(
     )
     epoch, elapsed_time = trainer.run()
 
-    metrics = {"epoch": epoch}
-    metrics |= {
+    metrics = {
         f"train/{k}": v
         for k, v in metrics_fn(game(train_dataset, train_dataset)).items()
     }
