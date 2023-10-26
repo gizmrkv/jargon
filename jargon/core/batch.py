@@ -29,13 +29,7 @@ class Batch:
 
     def __init__(self, **kwargs: Union[Tensor, "Batch", dict[str, Any]]) -> None:
         for k, v in kwargs.items():
-            assert isinstance(
-                v, (Tensor, Batch, dict)
-            ), f"{k} is not a tensor, batch or dict, but {k} is {type(v).__name__}"
-            if isinstance(v, dict):
-                self.__dict__[k] = Batch(**v)
-            else:
-                self.__dict__[k] = v
+            self.__setattr__(k, v)
 
     def __deepcopy__(self, memo: dict[int, Any]) -> "Batch":
         return Batch(**{k: deepcopy(v, memo) for k, v in self.__dict__.items()})
@@ -43,8 +37,16 @@ class Batch:
     def __getattr__(self, key: str) -> Union[Tensor, "Batch"]:
         return self.__dict__[key]
 
-    def __setattr__(self, key: str, value: Union[Tensor, "Batch"]) -> None:
-        self.__dict__[key] = value
+    def __setattr__(
+        self, key: str, value: Union[Tensor, "Batch", dict[str, Any]]
+    ) -> None:
+        assert isinstance(
+            value, (Tensor, Batch, dict)
+        ), f"{key} is not a tensor, batch or dict, but {key} is {type(value).__name__}"
+        if isinstance(value, dict):
+            self.__dict__[key] = Batch(**value)
+        else:
+            self.__dict__[key] = value
 
     def __contains__(self, key: str) -> bool:
         return key in self.__dict__
