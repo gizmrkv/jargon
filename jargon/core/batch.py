@@ -1,0 +1,177 @@
+import pprint
+from copy import deepcopy
+from typing import Any, Iterable, Union
+
+import torch
+from torch import Tensor
+
+
+class Batch:
+    """The data structure used to store a batch of data.
+
+    This is a simple wrapper around a dictionary of tensors. It is used to
+    store a batch of data, and is used throughout the library.
+    It supports addition and subtraction of batches of the same shape,
+    as well as concatenation of batches of the same shape.
+
+    Example:
+    >>> batch = Batch(x=torch.zeros(2, 3), b=Batch(y=torch.ones(2, 2)))
+    >>> batch
+    Batch(
+        x: tensor([[0., 0., 0.],
+                   [0., 0., 0.]]),
+        b: Batch(
+               y: tensor([[1., 1.],
+                          [1., 1.]]),
+           ),
+    )
+    """
+
+    def __init__(self, **kwargs: Union[Tensor, "Batch", dict[str, Any]]) -> None:
+        for k, v in kwargs.items():
+            assert isinstance(
+                v, (Tensor, Batch, dict)
+            ), f"{k} is not a tensor, batch or dict, but {k} is {type(v).__name__}"
+            if isinstance(v, dict):
+                self.__dict__[k] = Batch(**v)
+            else:
+                self.__dict__[k] = v
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> "Batch":
+        return Batch(**{k: deepcopy(v, memo) for k, v in self.__dict__.items()})
+
+    def __getattr__(self, key: str) -> Union[Tensor, "Batch"]:
+        return self.__dict__[key]
+
+    def __setattr__(self, key: str, value: Union[Tensor, "Batch"]) -> None:
+        self.__dict__[key] = value
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.__dict__
+
+    def __getstate__(self) -> dict[str, Union[Tensor, "Batch"]]:
+        return self.__dict__
+
+    def __setstate__(self, state: dict[str, Union[Tensor, "Batch"]]) -> None:
+        self.__dict__.update(state)
+
+    def __getitem__(self, key: str) -> Union[Tensor, "Batch"]:
+        return self.__dict__[key]
+
+    def __iadd__(self, rhs: "Batch") -> "Batch":
+        self.__dict__.update({k: v + rhs[k] for k, v in self.__dict__.items()})
+        return self
+
+    def __add__(self, rhs: "Batch") -> "Batch":
+        return Batch(**{k: v + rhs[k] for k, v in self.__dict__.items()})
+
+    def __imul__(self, rhs: "Batch") -> "Batch":
+        self.__dict__.update({k: v * rhs[k] for k, v in self.__dict__.items()})
+        return self
+
+    def __mul__(self, rhs: "Batch") -> "Batch":
+        return Batch(**{k: v * rhs[k] for k, v in self.__dict__.items()})
+
+    def __isub__(self, rhs: "Batch") -> "Batch":
+        self.__dict__.update({k: v - rhs[k] for k, v in self.__dict__.items()})
+        return self
+
+    def __sub__(self, rhs: "Batch") -> "Batch":
+        return Batch(**{k: v - rhs[k] for k, v in self.__dict__.items()})
+
+    def __itruediv__(self, rhs: "Batch") -> "Batch":
+        self.__dict__.update({k: v / rhs[k] for k, v in self.__dict__.items()})
+        return self
+
+    def __truediv__(self, rhs: "Batch") -> "Batch":
+        return Batch(**{k: v / rhs[k] for k, v in self.__dict__.items()})
+
+    def __floordiv__(self, rhs: "Batch") -> "Batch":
+        return Batch(**{k: v // rhs[k] for k, v in self.__dict__.items()})
+
+    def __ifloordiv__(self, rhs: "Batch") -> "Batch":
+        self.__dict__.update({k: v // rhs[k] for k, v in self.__dict__.items()})
+        return self
+
+    def __repr__(self) -> str:
+        self_str = "Batch(\n"
+        for k, v in self.__dict__.items():
+            rpl = "\n" + " " * (6 + len(k))
+            name = pprint.pformat(v).replace("\n", rpl)
+            self_str += f"    {k}: {name},\n"
+        self_str += ")"
+        return self_str
+
+    def to(self, device: torch.device) -> "Batch":
+        return Batch(**{k: v.to(device) for k, v in self.__dict__.items()})
+
+
+def cat(batches: Iterable[Batch], dim: int = 0) -> Batch:
+    """Concatenate batches of the same shape.
+
+    Parameters
+    ----------
+    batches : Iterable[Batch]
+        batches to concatenate, must be of the same shape.
+
+    dim : int, optional
+        dimension to concatenate on, by default 0
+
+    Returns
+    -------
+    Batch
+        concatenated batch
+
+    Example
+    -------
+    >>> batch1 = Batch(x=torch.randn(10, 3), b=Batch(y=torch.randn(10, 3)))
+    >>> batch2 = Batch(x=torch.randn(10, 3), b=Batch(y=torch.randn(10, 3)))
+    >>> batch3 = cat([batch1, batch2])
+    >>> batch3.x.shape
+    torch.Size([20, 3])
+    """
+    catted = {}
+    sample = next(iter(batches))
+    for k, v in sample.__dict__.items():
+        if isinstance(v, Batch):
+            catted[k] = cat([b[k] for b in batches])  # type: ignore
+        if isinstance(v, Tensor):
+            catted[k] = torch.cat([b[k] for b in batches], dim=dim)  # type: ignore
+
+    return Batch(**catted)
+
+
+def stack(batches: Iterable[Batch], dim: int = 0) -> Batch:
+    """Stack batches of the same shape.
+
+    Parameters
+    ----------
+    batches : Iterable[Batch]
+        batches to stack, must be of the same shape.
+    dim : int, optional
+        dimension to stack on, by default 0
+
+    Returns
+    -------
+    Batch
+        stacked batch
+
+    Example
+    -------
+    >>> import torch
+    >>> from jargon.core import Batch, stack
+    >>> batch1 = Batch(x=torch.randn(10, 3), b=Batch(y=torch.randn(10, 3)))
+    >>> batch2 = Batch(x=torch.randn(10, 3), b=Batch(y=torch.randn(10, 3)))
+    >>> batch3 = stack([batch1, batch2])
+    >>> batch3.x.shape
+    torch.Size([2, 10, 3])
+    """
+    stacked = {}
+    sample = next(iter(batches))
+    for k, v in sample.__dict__.items():
+        if isinstance(v, Batch):
+            stacked[k] = stack([b[k] for b in batches])  # type: ignore
+        if isinstance(v, Tensor):
+            stacked[k] = torch.stack([b[k] for b in batches], dim=dim)  # type: ignore
+
+    return Batch(**stacked)
