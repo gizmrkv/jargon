@@ -1,0 +1,14 @@
+gym
+matplotlib
+moviepy
+mypy
+numpy
+pandas
+pytest
+rapidfuzz
+scipy
+seaborn
+toml
+torch
+tqdm
+wandb
