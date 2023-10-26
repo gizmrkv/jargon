@@ -19,11 +19,13 @@ class BaseLogger:
 class WandbLogger(BaseLogger):
     """The logger for wandb."""
 
-    def __init__(self, **wandb_config: Any) -> None:
+    def __init__(self, prefix: str = "", **wandb_config: Any) -> None:
+        self.prefix = prefix
         wandb.init(**wandb_config)
 
     def log(self, epoch: int, data: Mapping[str, Any]) -> None:
-        wandb.log(data, step=epoch, commit=False)
+        metrics = {f"{self.prefix}{k}": v for k, v in data.items()}
+        wandb.log(metrics, step=epoch, commit=False)
 
     def flush(self) -> None:
         wandb.log({}, commit=True)
