@@ -1,0 +1,164 @@
+from typing import Any, Dict, Literal, Tuple
+
+import torch
+from torch import Tensor, nn
+from torch.distributions import Categorical
+
+
+class RNN(nn.Module):
+    """A wrapper class for RNN, LSTM, and GRU.
+
+    Parameters
+    ----------
+    input_dim : int
+        The size of the input.
+    hidden_size : int
+        The size of the hidden state.
+    num_layers : int, optional
+        The number of layers, by default 1
+    cell_type : Literal["rnn", "lstm", "gru"], optional
+        The type of the cell, by default "lstm"
+
+    Examples
+    --------
+    >>> rnn = RNN(32, 64)
+    >>> x = torch.randn(100, 10, 32)
+    >>> y, _ = rnn(x)
+    >>> y.shape
+    torch.Size([100, 10, 64])
+    """
+
+    def __init__(
+        self,
+        input_dim: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        cell_type: Literal["rnn", "lstm", "gru"] = "lstm",
+    ) -> None:
+        super().__init__()
+        self.input_dim = input_dim
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.cell_type = cell_type
+
+        cell = {
+            "rnn": nn.RNN,
+            "lstm": nn.LSTM,
+            "gru": nn.GRU,
+        }[cell_type]
+
+        self.cells = cell(input_dim, hidden_size, num_layers, batch_first=True)
+
+    def forward(
+        self, x: Tensor, state: Any = None
+    ) -> Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]:
+        if isinstance(state, Tensor) and isinstance(self.cells, nn.LSTM):
+            state = (state, torch.zeros_like(state))
+        x, state = self.cells(x, state)
+        return x, state
+
+    def generate_continuous_sequence(
+        self,
+        length: int,
+        start_embedding: Tensor,
+        state: Any = None,
+        output_layer: nn.Module | None = None,
+    ) -> Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]:
+        """Generate a continuous sequence.
+
+        Parameters
+        ----------
+        max_len : int
+            The maximum length of the sequence.
+        start_embedding : Tensor
+            The start embedding.
+            The size is (batch_size, embedding_dim).
+        state : Any, optional
+            The initial state, by default None
+        output_layer : nn.Module | None, optional
+            The output layer, by default None
+
+        Returns
+        -------
+        Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]
+            The sequence and the final state.
+
+        Examples
+        --------
+        >>> rnn = RNN(8, 32)
+        >>> sos = torch.randn(32).unsqueeze(0).repeat(100, 1)
+        >>> linear = nn.Linear(32, 8)
+        >>> y, _ = rnn.generate_continuous_sequence(10, sos, output_layer=linear)
+        >>> y.shape
+        torch.Size([100, 10, 8])
+        """
+        x = start_embedding.unsqueeze(1)
+        sequence = []
+        for _ in range(length):
+            x, state = self.forward(x, state)
+            if output_layer is not None:
+                x = output_layer(x)
+            sequence.append(x)
+
+        return torch.cat(sequence, dim=1), state
+
+    def generate_discrete_sequence(
+        self,
+        length: int,
+        embedding: nn.Embedding,
+        start_embedding: Tensor,
+        state: Any = None,
+        output_layer: nn.Module | None = None,
+    ) -> Tuple[Tensor, Dict[str, Tensor]]:
+        """Generate a discrete sequence.
+
+        Parameters
+        ----------
+        max_len : int
+            The maximum length of the sequence.
+        embedding : nn.Embedding
+            The embedding layer.
+        start_embedding : Tensor
+            The start embedding.
+            The size is (batch_size, embedding_dim).
+        state : Any, optional
+            The initial state, by default None
+        output_layer : nn.Module | None, optional
+            The output layer, by default None
+
+        Returns
+        -------
+        Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]
+            The sequence and the final state.
+
+        Examples
+        --------
+        >>> rnn = RNN(8, 32)
+        >>> sos = torch.randn(8).unsqueeze(0).repeat(100, 1)
+        >>> linear = nn.Linear(32, 10)
+        >>> emb = nn.Embedding(10, 8)
+        >>> y, _ = rnn.generate_discrete_sequence(10, emb, sos, output_layer=linear)
+        >>> y.shape
+        torch.Size([100, 10])
+        """
+        emb = start_embedding.unsqueeze(1)
+        symbol_list = []
+        logits_list = []
+        for _ in range(length):
+            logits_step, state = self(emb, state)
+            if output_layer is not None:
+                logits_step = output_layer(logits_step)
+
+            if self.training:
+                distr = Categorical(logits=logits_step)
+                symbol = distr.sample()
+            else:
+                symbol = logits_step.argmax(-1)
+
+            emb = embedding(symbol)
+            symbol_list.append(symbol)
+            logits_list.append(logits_step)
+
+        sequence = torch.cat(symbol_list, dim=1)
+        logits = torch.cat(logits_list, dim=1)
+        return sequence, {"logits": logits, "state": state}
