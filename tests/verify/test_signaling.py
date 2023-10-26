@@ -191,7 +191,7 @@ def _run_signaling(
         model=game,
         loss_fn=loss_fn,
         optim=optimizer,
-        max_epochs=1500,
+        max_epochs=3000,
         dataloader=train_dataloader,
         test_per_epoch=50,
         test_fn=test_fn,

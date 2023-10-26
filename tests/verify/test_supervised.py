@@ -225,7 +225,7 @@ def test_supervised() -> None:
     for _ in range(5):
         dt = datetime.datetime.now()
         name = dt.strftime("%Y/%m/%d %H:%M:%S.%f")
-        name = " supervised"
+        name += " supervised"
         logger = WandbLogger("supervised_pg/", project="tests", name=name)
         metrics = _run_supervised(logger=logger)
         logger.close()
@@ -237,7 +237,7 @@ def test_supervised_pg() -> None:
     for _ in range(5):
         dt = datetime.datetime.now()
         name = dt.strftime("%Y/%m/%d %H:%M:%S.%f")
-        name = " supervised_pg"
+        name += " supervised_pg"
         logger = WandbLogger("supervised/", project="tests", name=name)
         metrics = _run_supervised_pg(logger=logger)
         logger.close()
