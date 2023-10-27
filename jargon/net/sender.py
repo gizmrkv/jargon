@@ -1,4 +1,4 @@
-from typing import Dict, Literal, Tuple
+from typing import Any, Dict, Tuple, Type
 
 import torch
 from torch import Tensor, nn
@@ -28,8 +28,10 @@ class Sender(nn.Module):
         The size of the hidden state.
     num_layers : int, optional
         The number of layers, by default 1
-    cell_type : Literal["rnn", "lstm", "gru"], optional
-        The type of the cell, by default "lstm"
+    cell_type : Type[nn.Module], optional
+        The type of the cell, by default nn.LSTM
+    cell_args : Dict[str, Any], optional
+        The arguments for the cell, by default None
 
     Examples
     --------
@@ -44,27 +46,33 @@ class Sender(nn.Module):
     def __init__(
         self,
         encoder: nn.Module,
+        input_dim: int,
         vocab_size: int,
         length: int,
         embedding_dim: int,
         hidden_size: int,
         num_layers: int = 1,
-        cell_type: Literal["rnn", "lstm", "gru"] = "lstm",
+        cell_type: Type[nn.Module] | str = nn.LSTM,
+        cell_args: Dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
         self.encoder = encoder
+        self.input_dim = input_dim
         self.vocab_size = vocab_size
         self.length = length
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.cell_type = cell_type
+        self.cell_args = cell_args
 
+        self.input_layer = nn.Linear(input_dim, hidden_size)
         self.decoder = RNN(
             input_dim=embedding_dim,
             hidden_size=hidden_size,
             num_layers=num_layers,
             cell_type=cell_type,
+            cell_args=cell_args,
         )
         self.output_layer = nn.Linear(hidden_size, vocab_size)
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
@@ -74,7 +82,7 @@ class Sender(nn.Module):
         x = self.encoder(x)
         if isinstance(x, tuple):
             x, _ = x
-
+        x = self.input_layer(x)
         hidden = x.unsqueeze(0)
         hidden = x.repeat(self.num_layers, 1, 1)
         start = self.start.repeat(x.shape[0], 1)

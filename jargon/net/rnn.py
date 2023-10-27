@@ -1,4 +1,4 @@
-from typing import Any, Dict, Literal, Tuple
+from typing import Any, Dict, Tuple, Type
 
 import torch
 from torch import Tensor, nn
@@ -16,8 +16,10 @@ class RNN(nn.Module):
         The size of the hidden state.
     num_layers : int, optional
         The number of layers, by default 1
-    cell_type : Literal["rnn", "lstm", "gru"], optional
-        The type of the cell, by default "lstm"
+    cell_type : Type[nn.Module], optional
+        The type of the cell, by default nn.LSTM
+    cell_args : Dict[str, Any], optional
+        The arguments for the cell, by default None
 
     Examples
     --------
@@ -33,21 +35,23 @@ class RNN(nn.Module):
         input_dim: int,
         hidden_size: int,
         num_layers: int = 1,
-        cell_type: Literal["rnn", "lstm", "gru"] = "lstm",
+        cell_type: Type[nn.Module] | str = nn.LSTM,
+        cell_args: Dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
         self.input_dim = input_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+
+        if isinstance(cell_type, str):
+            cell_type = getattr(nn, cell_type)
+
         self.cell_type = cell_type
+        self.cell_args = cell_args or {}
 
-        cell = {
-            "rnn": nn.RNN,
-            "lstm": nn.LSTM,
-            "gru": nn.GRU,
-        }[cell_type]
-
-        self.cells = cell(input_dim, hidden_size, num_layers, batch_first=True)
+        self.cells = cell_type(  # type: ignore
+            input_dim, hidden_size, num_layers, batch_first=True, **self.cell_args
+        )
 
     def forward(
         self, x: Tensor, state: Any = None
@@ -161,4 +165,7 @@ class RNN(nn.Module):
 
         sequence = torch.cat(symbol_list, dim=1)
         logits = torch.cat(logits_list, dim=1)
+        if isinstance(state, tuple):
+            state = state[0]
+
         return sequence, {"logits": logits, "state": state}

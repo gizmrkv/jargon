@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple, Type
 
 from torch import Tensor, nn
 
@@ -14,10 +14,14 @@ class MLP(nn.Module):
         The dimension of the output.
     hidden_sizes : List[int]
         The sizes of the hidden layers.
-    activation : nn.Module, optional
-        The activation function, by default nn.ReLU()
-    normalize : bool, optional
-        Whether to apply layer normalization, by default False
+    activation_type : Type[nn.Module], optional
+        The activation function, by default nn.ReLU
+    activation_args : Dict[str, Any], optional
+        The arguments for the activation function, by default None
+    normalization_type : Type[nn.Module], optional
+        The normalization layer, by default None
+    normalization_args : Dict[str, Any], optional
+        The arguments for the normalization layer, by default None
     dropout : float, optional
         The dropout rate, by default 0.0
 
@@ -36,23 +40,42 @@ class MLP(nn.Module):
         input_dim: int,
         output_dim: int,
         hidden_sizes: List[int],
-        activation: nn.Module = nn.ReLU(),
-        normalize: bool = False,
+        activation_type: Type[nn.Module] | str = nn.ReLU,
+        activation_args: Dict[str, Any] | None = None,
+        normalization_type: Type[nn.Module] | str | None = None,
+        normalization_args: Dict[str, Any] | None = None,
         dropout: float = 0.0,
     ) -> None:
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_sizes = hidden_sizes
-        self.activation = activation
-        self.normalize = normalize
+
+        if isinstance(activation_type, str):
+            activation_type = getattr(nn, activation_type)
+
+        if isinstance(normalization_type, str):
+            normalization_type = getattr(nn, normalization_type)
+
+        self.activation_type = activation_type
+        self.activation_args = activation_args
+        self.normalization_type = normalization_type
+        self.normalization_args = normalization_args
         self.dropout = dropout
 
         dims = [input_dim, *hidden_sizes]
         layers = []
         for i in range(len(dims) - 1):
             layers.extend(
-                miniblock(dims[i], dims[i + 1], activation, normalize, dropout)
+                mini_block(
+                    input_dim=dims[i],
+                    output_dim=dims[i + 1],
+                    activation=activation_type,  # type: ignore
+                    activation_args=activation_args,
+                    normalization=normalization_type,  # type: ignore
+                    normalization_args=normalization_args,
+                    dropout=dropout,
+                )
             )
         layers.append(nn.Linear(dims[-1], output_dim))
         self.layers = nn.Sequential(*layers)
@@ -80,10 +103,14 @@ class MultiDiscreteMLP(nn.Module):
         The dimension of the embedding.
     hidden_sizes : List[int]
         The sizes of the hidden layers.
-    activation : nn.Module, optional
-        The activation function, by default nn.ReLU()
-    normalize : bool, optional
-        Whether to apply layer normalization, by default False
+    activation_type : Type[nn.Module], optional
+        The activation function, by default nn.ReLU
+    activation_args : Dict[str, Any], optional
+        The arguments for the activation function, by default None
+    normalization_type : Type[nn.Module], optional
+        The normalization layer, by default None
+    normalization_args : Dict[str, Any], optional
+        The arguments for the normalization layer, by default None
     dropout : float, optional
         The dropout rate, by default 0.0
 
@@ -104,8 +131,10 @@ class MultiDiscreteMLP(nn.Module):
         output_dim: int,
         embedding_dim: int,
         hidden_sizes: List[int],
-        activation: nn.Module = nn.ReLU(),
-        normalize: bool = False,
+        activation_type: Type[nn.Module] | str = nn.ReLU,
+        activation_args: Dict[str, Any] | None = None,
+        normalization_type: Type[nn.Module] | str | None = None,
+        normalization_args: Dict[str, Any] | None = None,
         dropout: float = 0.0,
     ) -> None:
         super().__init__()
@@ -114,13 +143,22 @@ class MultiDiscreteMLP(nn.Module):
         self.output_dim = output_dim
         self.embedding_dim = embedding_dim
         self.hidden_sizes = hidden_sizes
-        self.activation = activation
-        self.normalize = normalize
+        self.activation_type = activation_type
+        self.activation_args = activation_args
+        self.normalization_type = normalization_type
+        self.normalization_args = normalization_args
         self.dropout = dropout
 
         self.embedding = nn.Embedding(high, embedding_dim)
         self.mlp = MLP(
-            embedding_dim * n, output_dim, hidden_sizes, activation, normalize, dropout
+            input_dim=embedding_dim * n,
+            output_dim=output_dim,
+            hidden_sizes=hidden_sizes,
+            activation_type=activation_type,
+            activation_args=activation_args,
+            normalization_type=normalization_type,
+            normalization_args=normalization_args,
+            dropout=dropout,
         )
 
     def forward(self, x: Tensor) -> Tuple[Tensor, None]:
@@ -130,21 +168,25 @@ class MultiDiscreteMLP(nn.Module):
         return x, None
 
 
-def miniblock(
+def mini_block(
     input_dim: int,
     output_dim: int,
-    activation: nn.Module = nn.ReLU(),
-    normalize: bool = False,
+    activation: Type[nn.Module] = nn.ReLU,
+    activation_args: Dict[str, Any] | None = None,
+    normalization: Type[nn.Module] | None = None,
+    normalization_args: Dict[str, Any] | None = None,
     dropout: float = 0.0,
 ) -> List[nn.Module]:
     layers: List[nn.Module] = []
     layers.append(nn.Linear(input_dim, output_dim))
 
-    if normalize:
-        layers.append(nn.LayerNorm(output_dim))
+    if normalization is not None:
+        normalization_args = normalization_args or {}
+        layers.append(normalization(output_dim, **normalization_args))
 
     if dropout > 0.0:
         layers.append(nn.Dropout(dropout))
 
-    layers.append(activation)
+    activation_args = activation_args or {}
+    layers.append(activation(**activation_args))
     return layers
