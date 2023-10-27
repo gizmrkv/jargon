@@ -16,6 +16,12 @@ class BaseLogger:
         pass
 
 
+class DummyLogger(BaseLogger):
+    """The dummy logger."""
+
+    pass
+
+
 class WandbLogger(BaseLogger):
     """The logger for wandb."""
 
