@@ -1,0 +1,70 @@
+# Sweep seed value
+method: "grid"
+name: "signaling seed sweep"
+project: "jargon"
+
+metric:
+  name: "test/acc_part.mean"
+  goal: "maximize"
+
+parameters:
+  seed:
+    min: 0
+    max: 9
+
+  device:
+    value: "cuda"
+
+  num_elems:
+    value: 50
+  num_attrs:
+    value: 2
+  train_proportion:
+    value: 0.8
+  test_proportion:
+    value: 0.2
+  batch_size:
+    value: 4096
+
+  vocab_size:
+    value: 50
+  max_len:
+    value: 8
+  sender_input_dim:
+    value: 128
+  receiver_output_dim:
+    value: 128
+  encoder_args:
+    value:
+      embedding_dim: 8
+      hidden_sizes: [64]
+      activation_type: "GELU"
+      dropout: 0.1
+  sender_args:
+    value:
+      embedding_dim: 8
+      hidden_size: 128
+      num_layers: 2
+      cell_type: "GRU"
+  receiver_args:
+    value:
+      embedding_dim: 8
+      hidden_size: 128
+      num_layers: 2
+      cell_type: "GRU"
+  decoder_args:
+    value:
+      hidden_sizes: [64]
+      activation_type: "GELU"
+      dropout: 0.1
+  lr:
+    value: 0.001
+
+  max_epochs:
+    value: 3000
+  test_per_epoch:
+    value: 20
+  show_progress:
+    value: True
+  use_amp:
+    value: True
