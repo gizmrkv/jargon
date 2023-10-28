@@ -4,7 +4,7 @@ name: "identity seed sweep"
 project: "jargon"
 
 metric:
-  name: "sv/test/acc_part.mean"
+  name: "pg/test/acc_part.mean"
   goal: "maximize"
 
 parameters:
@@ -15,7 +15,7 @@ parameters:
     value: "cuda"
 
   num_elems:
-    value: 50
+    value: 10
   num_attrs:
     value: 2
   train_proportion:
@@ -34,7 +34,7 @@ parameters:
     value: 0.001
 
   loss_type:
-    value: "sv"
+    value: "pg"
 
   max_epochs:
     value: 400
