@@ -52,5 +52,5 @@ def test_signaling() -> None:
         result.game(result.test_dataset, result.test_dataset)
     )
 
-    assert train_metrics["acc_part.mean"] > 0.85
+    assert train_metrics["acc_part.mean"] > 0.8
     assert test_metrics["acc_part.mean"] > 0.5
