@@ -4,7 +4,7 @@ from jargon.zoo.identity import main
 def test_identity() -> None:
     result = main(
         seed=42,
-        device="cuda",
+        device="cpu",
         num_elems=50,
         num_attrs=2,
         train_proportion=0.8,
@@ -19,7 +19,7 @@ def test_identity() -> None:
         loss_type="sv",
         max_epochs=500,
         show_progress=True,
-        use_amp=True,
+        use_amp=False,
     )
 
     train_metrics = result.metrics_fn(
@@ -36,7 +36,7 @@ def test_identity() -> None:
 def test_identity_pg() -> None:
     result = main(
         seed=42,
-        device="cuda",
+        device="cpu",
         num_elems=10,
         num_attrs=2,
         train_proportion=0.8,
@@ -51,7 +51,7 @@ def test_identity_pg() -> None:
         loss_type="pg",
         max_epochs=500,
         show_progress=True,
-        use_amp=True,
+        use_amp=False,
     )
 
     train_metrics = result.metrics_fn(
@@ -61,5 +61,5 @@ def test_identity_pg() -> None:
         result.game(result.test_dataset, result.test_dataset)
     )
 
-    assert train_metrics["acc_part.mean"] > 0.85
-    assert test_metrics["acc_part.mean"] > 0.75
+    assert train_metrics["acc_part.mean"] > 0.95
+    assert test_metrics["acc_part.mean"] > 0.85

@@ -22,4 +22,4 @@ jobs:
           pip install -e .
       - name: Run tests
         run: |
-          pytest -v
+          pytest -v --doctest-modules
