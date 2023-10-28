@@ -72,11 +72,14 @@ class Trainer:
         self.epoch_end_fn = epoch_end_fn
         self.early_stop = early_stop
         self.show_progress = show_progress
-        self.use_amp = use_amp
 
         if use_amp:
-            assert torch.cuda.is_available(), "AMP requires CUDA"
-            self.scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+            if not torch.cuda.is_available():
+                print("CUDA is not available. Use CPU instead.")
+                use_amp = False
+            else:
+                self.scaler = torch.cuda.amp.GradScaler()
+        self.use_amp = use_amp
 
     def run(self) -> Tuple[int, float]:
         """Run the training loop.
