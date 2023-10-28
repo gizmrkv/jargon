@@ -96,6 +96,7 @@ def main(
             loss = loss.reshape(-1, num_attrs).mean(-1)
             return loss
         elif loss_type == "pg":
+            output = output.reshape(-1, num_attrs, num_elems)
             distr = Categorical(logits=output)
             if game.training:
                 action = distr.sample()
@@ -130,11 +131,6 @@ def main(
             "entropy.std": entropy.std().item(),
         }
 
-    if logger:
-        logger = logger
-    else:
-        logger = DummyLogger()
-
     def test_fn(epoch: int) -> None:
         metrics = {
             f"train/{k}": v
@@ -144,7 +140,8 @@ def main(
             f"test/{k}": v
             for k, v in metrics_fn(game(test_dataset, test_dataset)).items()
         }
-        logger.log(epoch, metrics)
+        if logger is not None:
+            logger.log(epoch, metrics)
 
     trainer = Trainer(
         model=game,
@@ -159,7 +156,8 @@ def main(
     )
     epoch, elapsed_time = trainer.run()
 
-    logger.close()
+    if logger is not None:
+        logger.close()
 
     return Result(
         epoch=epoch,
