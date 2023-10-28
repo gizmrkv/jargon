@@ -14,7 +14,8 @@ from jargon.core import Batch, Trainer
 from jargon.game import SignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
 from jargon.net.loss import pg_loss
-from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
+from jargon.utils import (BaseLogger, DummyLogger, fix_seed, init_weights,
+                          random_split)
 from jargon.utils.analysis import topographic_similarity
 
 
@@ -220,10 +221,6 @@ def main(
             "topsim": topsim,
         }
 
-    if logger:
-        logger = logger
-    else:
-        logger = DummyLogger()
 
     def test_fn(epoch: int) -> None:
         metrics = {
@@ -234,7 +231,8 @@ def main(
             f"test/{k}": v
             for k, v in metrics_fn(game(test_dataset, test_dataset)).items()
         }
-        logger.log(epoch, metrics)
+        if logger is not None:
+            logger.log(epoch, metrics)
 
     trainer = Trainer(
         model=game,
@@ -243,13 +241,14 @@ def main(
         max_epochs=max_epochs,
         dataloader=train_dataloader,
         test_per_epoch=test_per_epoch,
-        test_fn=test_fn,
+        test_fn=test_fn if logger else None,
         show_progress=show_progress,
         use_amp=use_amp,
     )
     epoch, elapsed_time = trainer.run()
 
-    logger.close()
+    if logger is not None:
+        logger.close()
 
     return Result(
         epoch=epoch,
