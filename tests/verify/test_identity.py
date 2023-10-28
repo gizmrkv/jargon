@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from jargon.zoo.identity import main
 
 
@@ -18,7 +20,7 @@ def test_identity() -> None:
         lr=1e-3,
         loss_type="sv",
         max_epochs=500,
-        show_progress=True,
+        show_progress=False,
         use_amp=False,
     )
 
@@ -28,6 +30,9 @@ def test_identity() -> None:
     test_metrics = result.metrics_fn(
         result.game(result.test_dataset, result.test_dataset)
     )
+
+    pprint(f"train_metrics: {train_metrics}")
+    pprint(f"test_metrics: {test_metrics}")
 
     assert train_metrics["acc_part.mean"] > 0.99
     assert test_metrics["acc_part.mean"] > 0.99
@@ -50,7 +55,7 @@ def test_identity_pg() -> None:
         lr=1e-3,
         loss_type="pg",
         max_epochs=500,
-        show_progress=True,
+        show_progress=False,
         use_amp=False,
     )
 
@@ -60,6 +65,9 @@ def test_identity_pg() -> None:
     test_metrics = result.metrics_fn(
         result.game(result.test_dataset, result.test_dataset)
     )
+
+    pprint(f"train_metrics: {train_metrics}")
+    pprint(f"test_metrics: {test_metrics}")
 
     assert train_metrics["acc_part.mean"] > 0.95
     assert test_metrics["acc_part.mean"] > 0.85
