@@ -20,6 +20,8 @@ class Receiver(nn.Module):
         The decoder that converts the feature vector into an output.
     vocab_size : int
         The size of the vocabulary.
+    output_dim : int
+        The dimension of the output.
     embedding_dim : int
         The dimension of the embedding.
     hidden_size : int
@@ -34,11 +36,19 @@ class Receiver(nn.Module):
     Examples
     --------
     >>> decoder = nn.Linear(32, 5)
-    >>> receiver = Receiver(decoder, 50, 8, 32)
-    >>> x = torch.randint(50, (100, 10))
-    >>> y, _ = receiver(x)
-    >>> y.shape
-    torch.Size([100, 10, 5])
+    >>> receiver = Receiver(
+    ...     decoder=decoder,
+    ...     vocab_size=50,
+    ...     output_dim=32,
+    ...     embedding_dim=8,
+    ...     hidden_size=64,
+    ...     num_layers=2,
+    ...     cell_type=nn.GRU,
+    ... )
+    >>> x = torch.randint(0, 50, (64, 10))
+    >>> output, aux = receiver(x)
+    >>> output.shape
+    torch.Size([64, 10, 5])
     """
 
     def __init__(

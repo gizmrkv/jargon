@@ -18,6 +18,8 @@ class Sender(nn.Module):
     ----------
     encoder : nn.Module
         The encoder that converts an input into a feature vector.
+    input_dim : int
+        The dimension of the input.
     vocab_size : int
         The size of the vocabulary.
     length : int
@@ -35,12 +37,21 @@ class Sender(nn.Module):
 
     Examples
     --------
-    >>> encoder = nn.Linear(32, 64)
-    >>> sender = Sender(encoder, 50, 10, 32, 64)
-    >>> x = torch.randn(100, 32)
-    >>> y, _ = sender(x)
-    >>> y.shape
-    torch.Size([100, 10])
+    >>> encoder = nn.Linear(10, 32)
+    >>> sender = Sender(
+    ...     encoder=encoder,
+    ...     input_dim=32,
+    ...     vocab_size=50,
+    ...     length=10,
+    ...     embedding_dim=8,
+    ...     hidden_size=64,
+    ...     num_layers=2,
+    ...     cell_type=nn.GRU,
+    ... )
+    >>> x = torch.randn(64, 10)
+    >>> sequence, aux = sender(x)
+    >>> sequence.shape
+    torch.Size([64, 10])
     """
 
     def __init__(
