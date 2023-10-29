@@ -34,23 +34,20 @@ class SignalingGame(nn.Module):
         self.receiver = receiver
 
     def forward(self, input: Tensor, target: Tensor) -> Batch:
-        message, message_aux = self.sender(input)
-        mask = padding_mask(message)
-        message = message * mask
-        length = mask.sum(dim=-1)
-        output, output_aux = self.receiver(message)
+        message, msg_logits = self.sender(input)
+        msg_mask = padding_mask(message)
+        message = message * msg_mask
+        msg_length = msg_mask.sum(dim=-1)
+        output = self.receiver(message)
         batch = Batch(
             input=input,
             message=message,
-            message_mask=mask,
-            message_length=length,
+            message_logits=msg_logits,
+            message_mask=msg_mask,
+            message_length=msg_length,
             output=output,
             target=target,
         )
-        if message_aux is not None:
-            batch.message_aux = message_aux
-        if output_aux is not None:
-            batch.output_aux = output_aux
 
         return batch
 

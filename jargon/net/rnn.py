@@ -53,9 +53,7 @@ class RNN(nn.Module):
             input_dim, hidden_size, num_layers, batch_first=True, **self.cell_args
         )
 
-    def forward(
-        self, x: Tensor, state: Any = None
-    ) -> Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]:
+    def forward(self, x: Tensor, state: Any = None) -> Tuple[Tensor, Any]:
         if isinstance(state, Tensor) and isinstance(self.cells, nn.LSTM):
             state = (state, torch.zeros_like(state))
         x, state = self.cells(x, state)
@@ -67,7 +65,7 @@ class RNN(nn.Module):
         start_embedding: Tensor,
         state: Any = None,
         output_layer: nn.Module | None = None,
-    ) -> Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]:
+    ) -> Tuple[Tensor, Any]:
         """Generate a continuous sequence.
 
         Parameters
@@ -113,7 +111,7 @@ class RNN(nn.Module):
         start_embedding: Tensor,
         state: Any = None,
         output_layer: nn.Module | None = None,
-    ) -> Tuple[Tensor, Dict[str, Tensor]]:
+    ) -> Tuple[Tensor, Tensor, Any]:
         """Generate a discrete sequence.
 
         Parameters
@@ -132,7 +130,7 @@ class RNN(nn.Module):
 
         Returns
         -------
-        Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]
+        Tuple[Tensor, Tensor, Any]
             The sequence and the final state.
 
         Examples
@@ -141,7 +139,7 @@ class RNN(nn.Module):
         >>> sos = torch.randn(8).unsqueeze(0).repeat(100, 1)
         >>> linear = nn.Linear(32, 10)
         >>> emb = nn.Embedding(10, 8)
-        >>> y, _ = rnn.generate_discrete_sequence(10, emb, sos, output_layer=linear)
+        >>> y, _, _ = rnn.generate_discrete_sequence(10, emb, sos, output_layer=linear)
         >>> y.shape
         torch.Size([100, 10])
         """
@@ -168,4 +166,4 @@ class RNN(nn.Module):
         if isinstance(state, tuple):
             state = state[0]
 
-        return sequence, {"logits": logits, "state": state}
+        return sequence, logits, state

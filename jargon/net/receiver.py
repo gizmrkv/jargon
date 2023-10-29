@@ -46,7 +46,7 @@ class Receiver(nn.Module):
     ...     cell_type=nn.GRU,
     ... )
     >>> x = torch.randint(0, 50, (64, 10))
-    >>> output, aux = receiver(x)
+    >>> output = receiver(x)
     >>> output.shape
     torch.Size([64, 10, 5])
     """
@@ -83,7 +83,7 @@ class Receiver(nn.Module):
         self.output_layer = nn.Linear(hidden_size, output_dim)
         self.start_hidden = nn.Parameter(torch.randn(num_layers, hidden_size))
 
-    def forward(self, x: Tensor) -> Tuple[Tensor, Any]:
+    def forward(self, x: Tensor) -> Tensor:
         emb = self.embedding(x)
         hidden = self.start_hidden.unsqueeze(1).repeat(1, x.shape[0], 1)
 
@@ -101,7 +101,4 @@ class Receiver(nn.Module):
         # output = torch.cat(output_list, dim=1)
         output = self.output_layer(output)
         output = self.decoder(output)
-        aux = None
-        if isinstance(output, tuple):
-            output, aux = output
-        return output, aux
+        return output

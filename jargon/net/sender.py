@@ -89,16 +89,14 @@ class Sender(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.start = nn.Parameter(torch.randn(embedding_dim))
 
-    def forward(self, x: Tensor) -> Tuple[Tensor, Dict[str, Tensor]]:
+    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         x = self.encoder(x)
-        if isinstance(x, tuple):
-            x, _ = x
         x = self.input_layer(x)
         hidden = x.unsqueeze(0)
         hidden = x.repeat(self.num_layers, 1, 1)
         start = self.start.repeat(x.shape[0], 1)
 
-        sequence, aux = self.decoder.generate_discrete_sequence(
+        sequence, logits, _ = self.decoder.generate_discrete_sequence(
             self.length,
             self.embedding,
             start,
@@ -106,4 +104,4 @@ class Sender(nn.Module):
             self.output_layer,
         )
 
-        return sequence, aux
+        return sequence, logits

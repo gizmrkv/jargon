@@ -30,7 +30,7 @@ class MLP(nn.Module):
     >>> import torch
     >>> mlp = MLP(10, 5, [20, 30, 40])
     >>> x = torch.randn(100, 10)
-    >>> y, _ = mlp(x)
+    >>> y = mlp(x)
     >>> y.shape
     torch.Size([100, 5])
     """
@@ -80,9 +80,9 @@ class MLP(nn.Module):
         layers.append(nn.Linear(dims[-1], output_dim))
         self.layers = nn.Sequential(*layers)
 
-    def forward(self, x: Tensor) -> Tuple[Tensor, None]:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.layers(x)
-        return x, None
+        return x
 
 
 class MultiDiscreteMLP(nn.Module):
@@ -119,7 +119,7 @@ class MultiDiscreteMLP(nn.Module):
     >>> import torch
     >>> mlp = MultiDiscreteMLP(10, 3, 5, 20, [30, 40])
     >>> x = torch.randint(0, 10, (100, 3))
-    >>> y, _ = mlp(x)
+    >>> y = mlp(x)
     >>> y.shape
     torch.Size([100, 5])
     """
@@ -161,11 +161,11 @@ class MultiDiscreteMLP(nn.Module):
             dropout=dropout,
         )
 
-    def forward(self, x: Tensor) -> Tuple[Tensor, None]:
+    def forward(self, x: Tensor) -> Tensor:
         x = self.embedding(x)
         x = x.reshape(x.shape[0], -1)
-        x, _ = self.mlp(x)
-        return x, None
+        x = self.mlp(x)
+        return x
 
 
 def mini_block(

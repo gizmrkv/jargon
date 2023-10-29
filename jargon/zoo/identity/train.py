@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, Literal, Mapping
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor, nn, optim
+from torch import Tensor, optim
 from torch.distributions import Categorical
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -12,7 +12,7 @@ from jargon.core import Batch, Trainer
 from jargon.game import SupervisedGame
 from jargon.net import MultiDiscreteMLP
 from jargon.net.loss import pg_loss
-from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
+from jargon.utils import BaseLogger, fix_seed, init_weights, random_split
 
 
 @dataclass

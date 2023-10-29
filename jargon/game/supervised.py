@@ -17,13 +17,11 @@ class SupervisedGame(nn.Module):
         self.model = model
 
     def forward(self, input: Tensor, target: Tensor) -> Batch:
-        output, output_aux = self.model(input)
+        output = self.model(input)
         batch = Batch(
             input=input,
             output=output,
             target=target,
         )
-        if output_aux is not None:
-            batch.output_aux = output_aux
 
         return batch

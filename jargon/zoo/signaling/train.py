@@ -14,8 +14,7 @@ from jargon.core import Batch, Trainer
 from jargon.game import SignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
 from jargon.net.loss import pg_loss
-from jargon.utils import (BaseLogger, DummyLogger, fix_seed, init_weights,
-                          random_split)
+from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
 from jargon.utils.analysis import topographic_similarity
 
 
@@ -143,7 +142,7 @@ def main(
         output: Tensor = batch.output  # type: ignore
         target: Tensor = batch.target  # type: ignore
         message: Tensor = batch.message  # type: ignore
-        msg_logits: Tensor = batch.message_aux.logits  # type: ignore
+        msg_logits: Tensor = batch.message_logits  # type: ignore
         msg_length: Tensor = batch.message_length  # type: ignore
         msg_mask: Tensor = batch.message_mask  # type: ignore
 
@@ -174,7 +173,7 @@ def main(
         output: Tensor = batch.output  # type: ignore
         target: Tensor = batch.target  # type: ignore
         message: Tensor = batch.message  # type: ignore
-        msg_logits: Tensor = batch.message_aux.logits  # type: ignore
+        msg_logits: Tensor = batch.message_logits  # type: ignore
         msg_mask: Tensor = batch.message_mask  # type: ignore
         msg_length: Tensor = batch.message_length  # type: ignore
         loss = loss_fn(batch)
@@ -220,7 +219,6 @@ def main(
             "unique": unique,
             "topsim": topsim,
         }
-
 
     def test_fn(epoch: int) -> None:
         metrics = {
