@@ -88,17 +88,6 @@ class Receiver(nn.Module):
         hidden = self.start_hidden.unsqueeze(1).repeat(1, x.shape[0], 1)
 
         output, _ = self.encoder(emb, hidden)
-        # is_end = (x == 0).float()
-        # is_con = (x != 0).float()
-        # output_list = []
-        # for i in range(x.shape[1]):
-        #     output_step, hidden_step = self.encoder(emb[:, i, :].unsqueeze(1), hidden)
-        #     hidden = (
-        #         is_con[:, i].unsqueeze(1) * hidden_step
-        #         + is_end[:, i].unsqueeze(1) * hidden
-        #     )
-        #     output_list.append(output_step)
-        # output = torch.cat(output_list, dim=1)
         output = self.output_layer(output)
         output = self.decoder(output)
         return output
