@@ -98,6 +98,8 @@ class Trainer:
         losses: list[Tensor] = []
 
         elapsed_time = time.time()
+        loss_min = 1e10
+        loss_min_epoch = 0
         for epoch in range(self.max_epochs):
             self.model.train()
             losses.clear()
@@ -129,9 +131,14 @@ class Trainer:
                     self.optim.step()
 
             loss = torch.cat(losses)
+            loss_mean = loss.mean().item()
+            if loss_mean < loss_min:
+                loss_min = loss_mean
+                loss_min_epoch = epoch
             prog.set_postfix(
-                loss_mean=f"{loss.mean().item():0.3f}",
-                loss_std=f"{loss.std().item():0.3f}",
+                mean=f"{loss_mean:0.3f}",
+                min=f"{loss_min:0.3f}",
+                min_epoch=loss_min_epoch,
             )
             prog.set_description(f"Epoch #{epoch}")
             prog.update()
