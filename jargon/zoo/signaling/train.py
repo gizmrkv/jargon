@@ -14,7 +14,7 @@ from jargon.core import Batch, Trainer
 from jargon.game import SignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
 from jargon.net.loss import pg_loss
-from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
+from jargon.utils import BaseLogger, fix_seed, init_weights, random_split
 from jargon.utils.analysis import topographic_similarity
 
 
@@ -77,6 +77,8 @@ def main(
         "dropout": 0.0,
     },
     lr: float = 1e-3,
+    entropy_loss_weight: float = 0.0,
+    length_loss_weight: float = 0.0,
     logger: BaseLogger | None = None,
     max_epochs: int = 3000,
     test_per_epoch: int = 20,
@@ -157,10 +159,12 @@ def main(
 
         loss_s = pg_loss(log_prob, -loss_r.detach(), 1.0)
 
-        loss_ent = 0.0 * distr.entropy() * msg_mask
+        loss_ent = entropy_loss_weight * distr.entropy() * msg_mask
 
         length = msg_length.float() / max_len
-        loss_len = 0.0 * pg_loss(log_prob.sum(-1).unsqueeze(1), -length.unsqueeze(1))
+        loss_len = length_loss_weight * pg_loss(
+            log_prob.sum(-1).unsqueeze(1), -length.unsqueeze(1)
+        )
 
         loss = loss_s + loss_r
         loss += loss_len
