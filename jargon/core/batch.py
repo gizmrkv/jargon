@@ -1,6 +1,6 @@
 import pprint
 from copy import deepcopy
-from typing import Any, Iterable, Union
+from typing import Any, Dict, Iterable, Union
 
 import torch
 from torch import Tensor
@@ -68,6 +68,9 @@ class Batch:
         ), f"{key} is not a tensor or batch"
         return self.__dict__[key]
 
+    def __iter__(self, key: str) -> Iterable[str]:
+        return iter(self.__dict__[key])
+
     def __iadd__(self, rhs: "Batch") -> "Batch":
         self.__dict__.update({k: v + rhs[k] for k, v in self.__dict__.items()})
         return self
@@ -114,6 +117,51 @@ class Batch:
 
     def to(self, device: torch.device) -> "Batch":
         return Batch(**{k: v.to(device) for k, v in self.__dict__.items()})
+
+    def keys(self) -> Iterable[str]:
+        return self.__dict__.keys()
+
+    def values(self) -> Iterable[Union[Tensor, "Batch"]]:
+        return self.__dict__.values()
+
+    def items(self) -> Iterable[tuple[str, Union[Tensor, "Batch"]]]:
+        return self.__dict__.items()
+
+    def __len__(self) -> int:
+        return len(self.__dict__)
+
+    def flatten_dict(self) -> Dict[str, Tensor]:
+        flatted: Dict[str, Tensor] = {}
+        for k, v in self.items():
+            if isinstance(v, Batch):
+                sub = v.flatten_dict()
+                flatted |= {f"{k}.{k2}": v2 for k2, v2 in sub.items()}
+            else:
+                flatted[k] = v
+        return flatted
+
+    def flatten(self) -> "Batch":
+        return Batch(**self.flatten_dict())
+
+    def empty(self) -> bool:
+        return len(self.__dict__) == 0
+
+    def has_batch(self) -> bool:
+        for v in self.values():
+            if isinstance(v, Batch):
+                return True
+        return False
+
+    def tensors(self) -> Iterable[Tensor]:
+        for v in self.values():
+            if isinstance(v, Tensor):
+                yield v
+            elif isinstance(v, Batch):
+                yield from v.tensors()
+
+    def batch_size(self) -> int:
+        # return batch size of tensors in this batch
+        return next(iter(self.tensors())).shape[0]
 
 
 def cat(batches: Iterable[Batch], dim: int = 0) -> Batch:
