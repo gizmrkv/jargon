@@ -68,8 +68,8 @@ class Batch:
         ), f"{key} is not a tensor or batch"
         return self.__dict__[key]
 
-    def __iter__(self, key: str) -> Iterable[str]:
-        return iter(self.__dict__[key])
+    def __iter__(self) -> Iterable[str]:
+        return iter(self.__dict__)
 
     def __iadd__(self, rhs: "Batch") -> "Batch":
         self.__dict__.update({k: v + rhs[k] for k, v in self.__dict__.items()})
