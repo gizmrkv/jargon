@@ -1,21 +1,25 @@
 import itertools
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Mapping
 
-import numpy as np
 import torch
-import torch.nn.functional as F
 from numpy.typing import NDArray
 from torch import Tensor, nn, optim
-from torch.distributions import Categorical
 from torch.utils.data import DataLoader, TensorDataset
 
 from jargon.core import Batch, Trainer
-from jargon.game import SignalingGame
+from jargon.game import MultiSignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
-from jargon.net.loss import pg_loss
 from jargon.utils import BaseLogger, fix_seed, init_weights, random_split
-from jargon.utils.analysis import topographic_similarity
+from jargon.zoo.multi_signaling.loss import ExplorationLoss
+from jargon.zoo.multi_signaling.metrics import (
+    accuracy_metrics,
+    langsim_metrics,
+    loss_metrics,
+    message_metrics,
+    topsim_metrics,
+)
 
 
 @dataclass
@@ -24,7 +28,7 @@ class Result:
     elapsed_time: float
     train_dataset: Tensor
     test_dataset: Tensor
-    game: SignalingGame
+    game: MultiSignalingGame
     loss_fn: Callable[[Batch], Tensor]
     metrics_fn: Callable[[Batch], Dict[str, Any]]
 
@@ -49,7 +53,7 @@ def main(
         "activation_args": None,
         "normalization_type": "LayerNorm",
         "normalization_args": None,
-        "dropout": 0.0,
+        "dropout": 0.1,
     },
     sender_args: Mapping[str, Any]
     | None = {
@@ -74,7 +78,7 @@ def main(
         "activation_args": None,
         "normalization_type": "LayerNorm",
         "normalization_args": None,
-        "dropout": 0.0,
+        "dropout": 0.1,
     },
     lr: float = 1e-3,
     discount_factor: float = 0.99,
@@ -82,7 +86,7 @@ def main(
     length_loss_weight: float = 0.0,
     logger: BaseLogger | None = None,
     max_epochs: int = 3000,
-    test_per_epoch: int = 20,
+    test_per_epoch: int = 10,
     show_progress: bool = True,
     use_amp: bool = True,
 ) -> Result:
@@ -137,93 +141,46 @@ def main(
         **receiver_args,
     )
 
-    game = SignalingGame(sender, receiver).to(device)
+    num_senders = 2
+    num_receivers = 2
+    senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
+    receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
+    channels = {
+        "S0": {"R0"},
+        "S1": {"R1"},
+    }
+    # channels_fully = {s: {r for r in receivers} for s in senders}
+    # channels_co = {s: {r for r in receivers if r not in channels[s]} for s in senders}
+    # channels_empty = {s: set[str]() for s in senders}
+
+    game = MultiSignalingGame(senders, receivers, channels).to(device)
     game.apply(init_weights)
     optimizer = optim.Adam(game.parameters(), lr=lr)
 
-    def loss_fn(batch: Batch) -> Tensor:
-        output: Tensor = batch.output  # type: ignore
-        target: Tensor = batch.target  # type: ignore
-        message: Tensor = batch.message  # type: ignore
-        msg_logits: Tensor = batch.message_logits  # type: ignore
-        msg_length: Tensor = batch.message_length  # type: ignore
-        msg_mask: Tensor = batch.message_mask  # type: ignore
+    exploration_targets = {
+        "S0": {"R0"},
+        "S1": {"R1"},
+        "R0": {"S0"},
+        "R1": {"S1"},
+    }
 
-        output = output.reshape(-1, num_elems)
-        target = target.unsqueeze(1).expand(-1, max_len, -1).reshape(-1)
-        loss_r = F.cross_entropy(output, target, reduction="none")
-        loss_r = loss_r.reshape(-1, max_len, num_attrs).mean(-1)
-
-        distr = Categorical(logits=msg_logits)
-        log_prob = distr.log_prob(message)
-        log_prob = log_prob * msg_mask
-
-        loss_s = pg_loss(log_prob, -loss_r.detach(), discount_factor)
-
-        loss_ent = entropy_loss_weight * distr.entropy() * msg_mask
-
-        length = msg_length.float() / max_len
-        loss_len = length_loss_weight * pg_loss(
-            log_prob.sum(-1).unsqueeze(1), -length.unsqueeze(1)
-        )
-
-        loss = loss_s + loss_r
-        loss += loss_len
-        loss += loss_ent
-        loss = loss.mean(-1)
-        return loss
+    loss_fn = ExplorationLoss(
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        vocab_size=vocab_size,
+        max_len=max_len,
+        game=game,
+        discount_factor=discount_factor,
+        exploration_targets=exploration_targets,
+    )
 
     def metrics_fn(batch: Batch) -> Dict[str, Any]:
-        input: Tensor = batch.input  # type: ignore
-        output: Tensor = batch.output  # type: ignore
-        target: Tensor = batch.target  # type: ignore
-        message: Tensor = batch.message  # type: ignore
-        msg_logits: Tensor = batch.message_logits  # type: ignore
-        msg_mask: Tensor = batch.message_mask  # type: ignore
-        msg_length: Tensor = batch.message_length  # type: ignore
-        loss = loss_fn(batch)
-
-        output = output[:, -1, :]
-        acc_flag = output.reshape(-1, num_attrs, num_elems).argmax(-1) == target
-        acc_comp = acc_flag.all(-1).float()
-        acc_part = acc_flag.float()
-
-        distr_r = Categorical(logits=output)
-        entropy_r: Tensor = distr_r.entropy()
-
-        distr_s = Categorical(logits=msg_logits.reshape(-1, max_len, vocab_size))
-        entropy_s = distr_s.entropy() * msg_mask
-
-        msg_length = msg_length.float()
-
-        unique = message.unique(dim=0).shape[0] / message.shape[0]
-
-        def drop_padding(x: NDArray[np.int32]) -> NDArray[np.int32]:
-            i = np.argwhere(x == 0)
-            return x if len(i) == 0 else x[: i[0, 0]]
-
-        topsim = topographic_similarity(
-            input.cpu().numpy(),
-            message.cpu().numpy(),
-            y_processor=drop_padding,  # type: ignore
-        )
-
-        return {
-            "loss.mean": loss.mean().item(),
-            "acc_comp.mean": acc_comp.mean().item(),
-            "acc_part.mean": acc_part.mean().item(),
-            "entropy_r.mean": entropy_r.mean().item(),
-            "entropy_s.mean": entropy_s.mean().item(),
-            "length.mean": msg_length.mean().item(),
-            "loss.std": loss.std().item(),
-            "acc_comp.std": acc_comp.std().item(),
-            "acc_part.std": acc_part.std().item(),
-            "entropy_r.std": entropy_r.std().item(),
-            "entropy_s.std": entropy_s.std().item(),
-            "length.std": msg_length.std().item(),
-            "unique": unique,
-            "topsim": topsim,
-        }
+        metrics = accuracy_metrics(batch, num_elems, num_attrs)
+        metrics |= message_metrics(batch, vocab_size, max_len)
+        metrics |= loss_metrics(batch, loss_fn)
+        metrics |= topsim_metrics(batch)
+        metrics |= langsim_metrics(batch)
+        return metrics
 
     def test_fn(epoch: int) -> None:
         metrics = {
@@ -267,6 +224,8 @@ def main(
 if __name__ == "__main__":
     from jargon.utils.logger import WandbLogger
 
+    torch.backends.cudnn.deterministic = True
+
     logger = WandbLogger(project="jargon")
-    result = main(logger=logger, max_epochs=2000, num_elems=30)
+    result = main(logger=logger, max_epochs=2000, num_elems=50)
     print(result)
