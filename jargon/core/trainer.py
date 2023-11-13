@@ -59,7 +59,7 @@ class Trainer:
         epoch_end_fn: Callable[[int], None] | None = None,
         early_stop: Callable[[int], bool] | None = None,
         show_progress: bool = True,
-        use_amp: bool = False,
+        use_amp: bool = True,
     ) -> None:
         self.model = model
         self.optim = optim
@@ -73,13 +73,13 @@ class Trainer:
         self.early_stop = early_stop
         self.show_progress = show_progress
 
-        if use_amp:
-            if not torch.cuda.is_available():
-                print("CUDA is not available. Use CPU instead.")
-                use_amp = False
-            else:
-                self.scaler = torch.cuda.amp.GradScaler()
+        if use_amp and not torch.cuda.is_available():
+            print("CUDA is not available. Use CPU instead.")
+            use_amp = False
+
         self.use_amp = use_amp
+        self.amp = torch.cuda.amp if torch.cuda.is_available() else torch.cpu.amp
+        self.scaler = torch.cuda.amp.GradScaler() if use_amp else DummyGradScaler()
 
     def run(self) -> Tuple[int, float]:
         """Run the training loop.
@@ -89,10 +89,7 @@ class Trainer:
         Tuple[int, float]
             The number of epochs run and the elapsed time in seconds.
         """
-        if self.show_progress:
-            progress = tqdm.tqdm
-        else:
-            progress = DummyTqdm  # type: ignore
+        progress = tqdm.tqdm if self.show_progress else DummyTqdm
 
         prog = progress(total=self.max_epochs)
         losses: list[Tensor] = []
@@ -108,27 +105,17 @@ class Trainer:
                 self.epoch_begin_fn(epoch)
 
             for data in self.dataloader:
-                self.optim.zero_grad()
-
-                if self.use_amp:
-                    with torch.cuda.amp.autocast(dtype=torch.float16):
-                        batch: Batch = self._call_model(data)
-                        loss = self.loss_fn(batch)
-                        losses.append(loss)
-                        loss = loss.mean()
-
-                    self.scaler.scale(loss).backward()
-                    self.scaler.unscale_(self.optim)
-                    nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-                    self.scaler.step(self.optim)
-                    self.scaler.update()
-                else:
-                    batch = self._call_model(data)
+                with self.amp.autocast(enabled=self.use_amp, dtype=torch.float16):
+                    batch: Batch = self._call_model(data)
                     loss = self.loss_fn(batch)
                     losses.append(loss)
                     loss = loss.mean()
-                    loss.backward(retain_graph=True)
-                    self.optim.step()
+
+                self.scaler.scale(loss).backward()
+                self.scaler.unscale_(self.optim)
+                nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                self.scaler.step(self.optim)
+                self.scaler.update()
 
             loss = torch.cat(losses)
             loss_mean = loss.mean().item()
@@ -169,7 +156,7 @@ class Trainer:
 
 
 class DummyTqdm:
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
     def set_postfix(self, *args: Any, **kwargs: Any) -> None:
@@ -182,4 +169,21 @@ class DummyTqdm:
         pass
 
     def close(self) -> None:
+        pass
+
+
+class DummyGradScaler:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def scale(self, loss: Tensor) -> Tensor:
+        return loss
+
+    def unscale_(self, optim: optim.Optimizer) -> None:
+        pass
+
+    def step(self, optim: optim.Optimizer) -> None:
+        optim.step()
+
+    def update(self) -> None:
         pass
