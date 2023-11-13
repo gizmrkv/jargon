@@ -38,7 +38,7 @@ class SignalingGame(nn.Module):
         msg_mask = padding_mask(message)
         message = message * msg_mask
         msg_length = msg_mask.sum(dim=-1)
-        output = self.receiver(message)
+        output, logits = self.receiver(message)
         batch = Batch(
             input=input,
             message=message,
@@ -46,6 +46,7 @@ class SignalingGame(nn.Module):
             message_mask=msg_mask,
             message_length=msg_length,
             output=output,
+            output_logits=logits,
             target=target,
         )
 

@@ -48,10 +48,14 @@ class MultiSignalingGame(nn.Module):
         outputs: Dict[str, Dict[str, Tensor]] = {
             sender_name: {} for sender_name in self.senders.keys()
         }
+        outputs_logits: Dict[str, Dict[str, Tensor]] = {
+            sender_name: {} for sender_name in self.senders.keys()
+        }
         for name_s, names_r in self.channels.items():
             for name_r in names_r:
-                output = self.receivers[name_r](messages[name_s])
+                output, logits = self.receivers[name_r](messages[name_s])
                 outputs[name_s][name_r] = output
+                outputs_logits[name_s][name_r] = logits
 
         batch = Batch(
             input=input,
@@ -60,6 +64,7 @@ class MultiSignalingGame(nn.Module):
             messages_mask=messages_mask,
             messages_length=messages_length,
             outputs=outputs,
+            outputs_logits=outputs_logits,
             target=target,
         )
 

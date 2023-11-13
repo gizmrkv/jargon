@@ -92,16 +92,17 @@ class Sender(nn.Module):
     def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
         x = self.encoder(x)
         x = self.input_layer(x)
-        hidden = x.unsqueeze(0)
         hidden = x.repeat(self.num_layers, 1, 1)
-        start = self.start.repeat(x.shape[0], 1)
+        if isinstance(self.decoder, nn.LSTM):
+            hidden = (hidden, torch.zeros_like(hidden))
 
-        sequence, logits, _ = self.decoder.generate_discrete_sequence(
-            self.length,
-            self.embedding,
-            start,
-            hidden,
-            self.output_layer,
+        start = self.start.repeat(x.shape[0], 1)
+        sequence, logits = self.decoder.generate_discrete_sequence(
+            length=self.length,
+            embedding=self.embedding,
+            start_embedding=start,
+            state=hidden,
+            output_layer=self.output_layer,
         )
 
         return sequence, logits

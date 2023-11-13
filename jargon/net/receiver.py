@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple, Type
 
 import torch
 from torch import Tensor, nn
+from torch.distributions import Categorical
 
 from .rnn import RNN
 
@@ -56,6 +57,8 @@ class Receiver(nn.Module):
         decoder: nn.Module,
         vocab_size: int,
         output_dim: int,
+        num_elems: int,
+        num_attrs: int,
         embedding_dim: int,
         hidden_size: int,
         num_layers: int = 1,
@@ -66,6 +69,8 @@ class Receiver(nn.Module):
         self.decoder = decoder
         self.vocab_size = vocab_size
         self.output_dim = output_dim
+        self.num_elems = num_elems
+        self.num_attrs = num_attrs
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -81,13 +86,20 @@ class Receiver(nn.Module):
             cell_args=cell_args,
         )
         self.output_layer = nn.Linear(hidden_size, output_dim)
-        self.start_hidden = nn.Parameter(torch.randn(num_layers, hidden_size))
 
     def forward(self, x: Tensor) -> Tensor:
         emb = self.embedding(x)
-        hidden = self.start_hidden.unsqueeze(1).repeat(1, x.shape[0], 1)
+        _, hidden = self.encoder(emb)
+        if isinstance(hidden, tuple):
+            hidden, _ = hidden
+        hidden = hidden[-1]
+        logits = self.output_layer(hidden)
+        logits = self.decoder(logits)
+        logits = logits.reshape(-1, self.num_attrs, self.num_elems)
+        if self.training:
+            distr = Categorical(logits=logits)
+            output = distr.sample()
+        else:
+            output = logits.argmax(dim=-1)
 
-        output, _ = self.encoder(emb, hidden)
-        output = self.output_layer(output)
-        output = self.decoder(output)
-        return output
+        return output, logits

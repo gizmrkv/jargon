@@ -54,8 +54,6 @@ class RNN(nn.Module):
         )
 
     def forward(self, x: Tensor, state: Any = None) -> Tuple[Tensor, Any]:
-        if isinstance(state, Tensor) and isinstance(self.cells, nn.LSTM):
-            state = (state, torch.zeros_like(state))
         x, state = self.cells(x, state)
         return x, state
 
@@ -155,7 +153,7 @@ class RNN(nn.Module):
                 distr = Categorical(logits=logits_step)
                 symbol = distr.sample()
             else:
-                symbol = logits_step.argmax(-1)
+                symbol = logits_step.argmax(dim=-1)
 
             emb = embedding(symbol)
             symbol_list.append(symbol)
@@ -163,7 +161,5 @@ class RNN(nn.Module):
 
         sequence = torch.cat(symbol_list, dim=1)
         logits = torch.cat(logits_list, dim=1)
-        if isinstance(state, tuple):
-            state = state[0]
 
-        return sequence, logits, state
+        return sequence, logits
