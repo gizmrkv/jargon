@@ -1,23 +1,27 @@
-from typing import Dict
+from pathlib import Path
+from typing import Dict, List, Sequence
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from numpy.typing import NDArray
 from torch import Tensor
 from torch.distributions import Categorical
 
 from jargon.core import Batch
 from jargon.utils.analysis import language_similarity, topographic_similarity
-from jargon.zoo.multi_signaling.loss import ExplorationLoss
+from jargon.zoo.multi_signaling.loss import Loss
+
+matplotlib.use("Agg")
 
 
 def accuracy_metrics(batch: Batch, num_elems: int, num_attrs: int) -> Dict[str, float]:
     metrics: Dict[str, float] = {}
     for name_s, outputs in batch.outputs.items():  # type: ignore
         for name_r, output in outputs.items():  # type: ignore
-            output = output[:, -1, :]  # type: ignore
-            acc_flag = (
-                output.reshape(-1, num_attrs, num_elems).argmax(-1) == batch.target  # type: ignore
-            )
+            acc_flag = output == batch.target  # type: ignore
             acc_comp = acc_flag.all(-1).float()
             acc_part = acc_flag.float()
             metrics |= {
@@ -30,10 +34,20 @@ def accuracy_metrics(batch: Batch, num_elems: int, num_attrs: int) -> Dict[str, 
     return metrics
 
 
+def accuracy_dataframe(
+    metrics: Dict[str, float], senders: Sequence[str], receivers: Sequence[str]
+) -> pd.DataFrame:
+    matrix: List[List[float]] = [[-1.0 for _ in receivers] for _ in senders]
+    for s in range(len(senders)):
+        for r in range(len(receivers)):
+            matrix[s][r] = metrics[f"acc/part.{senders[s]}->{receivers[r]}.mean"]
+
+    return pd.DataFrame(data=matrix, columns=receivers, index=senders)
+
+
 def message_metrics(batch: Batch, vocab_size: int, max_len: int) -> Dict[str, float]:
     metrics: Dict[str, float] = {}
     for name_s in batch.messages:  # type: ignore
-        input: Tensor = batch.input  # type: ignore
         message: Tensor = batch.messages[name_s]  # type: ignore
         msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
         msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
@@ -57,10 +71,12 @@ def message_metrics(batch: Batch, vocab_size: int, max_len: int) -> Dict[str, fl
     return metrics
 
 
-def loss_metrics(batch: Batch, loss: ExplorationLoss) -> Dict[str, float]:
-    loss_com = loss.communication_losses(batch)
-    loss_sen = loss.sender_losses(batch, loss_com)
-    loss_rec = loss.receiver_losses(batch, loss_com)
+def loss_metrics(batch: Batch, loss: Loss) -> Dict[str, float]:
+    loss_com = loss.receiver_communication_losses(batch)
+    loss_imi = loss.sender_imitation_losses(batch)
+
+    loss_sen = loss.sender_losses(batch, loss_com, loss_imi)
+    loss_rec = loss.receiver_losses(batch, loss_com, loss_imi)
 
     metrics: Dict[str, float] = {}
     for name, l in (loss_sen | loss_rec).items():
@@ -99,6 +115,37 @@ def langsim_metrics(batch: Batch) -> Dict[str, float]:
     return metrics
 
 
+def langsim_dataframe(
+    metrics: Dict[str, float], senders: Sequence[str]
+) -> pd.DataFrame:
+    matrix: List[List[float]] = [[-1.0 for _ in senders] for _ in senders]
+    for i in range(len(senders)):
+        matrix[i][i] = 1.0
+        for j in range(i + 1, len(senders)):
+            langsim = metrics[f"langsim/{senders[i]}-{senders[j]}"]
+            matrix[i][j] = langsim
+            matrix[j][i] = langsim
+
+    return pd.DataFrame(data=matrix, columns=senders, index=senders)
+
+
 def drop_padding(x: NDArray[np.int32]) -> NDArray[np.int32]:
     i = np.argwhere(x == 0)
     return x if len(i) == 0 else x[: i[0, 0]]
+
+
+def dataframe_to_image(df: pd.DataFrame, epoch: int, save_dir: Path) -> None:
+    sns.heatmap(
+        df,
+        vmin=0,
+        vmax=1,
+        cmap="viridis",
+        annot=True,
+        fmt=".2f",
+        cbar=True,
+        square=True,
+    )
+    plt.title(f"Epoch {epoch}")
+    path = save_dir.joinpath(f"{epoch:0>8}.png")
+    plt.savefig(path)
+    plt.clf()
