@@ -55,8 +55,6 @@ class Trainer:
         dataloader: Iterable[Any],
         test_per_epoch: int = 1,
         test_fn: Callable[[int], None] | None = None,
-        epoch_begin_fn: Callable[[int], None] | None = None,
-        epoch_end_fn: Callable[[int], None] | None = None,
         early_stop: Callable[[int], bool] | None = None,
         show_progress: bool = True,
         use_amp: bool = True,
@@ -68,8 +66,6 @@ class Trainer:
         self.dataloader = dataloader
         self.test_per_epoch = test_per_epoch
         self.test_fn = test_fn
-        self.epoch_begin_fn = epoch_begin_fn
-        self.epoch_end_fn = epoch_end_fn
         self.early_stop = early_stop
         self.show_progress = show_progress
 
@@ -101,9 +97,6 @@ class Trainer:
             self.model.train()
             losses.clear()
 
-            if self.epoch_begin_fn:
-                self.epoch_begin_fn(epoch)
-
             for data in self.dataloader:
                 with self.amp.autocast(enabled=self.use_amp, dtype=torch.float16):
                     batch: Batch = self._call_model(data)
@@ -134,9 +127,6 @@ class Trainer:
                 with torch.no_grad():
                     self.model.eval()
                     self.test_fn(epoch)
-
-            if self.epoch_end_fn:
-                self.epoch_end_fn(epoch)
 
             if self.early_stop and self.early_stop(epoch):
                 break
