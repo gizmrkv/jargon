@@ -1,17 +1,16 @@
 import itertools
-from typing import Any, Callable, Dict, List, Literal, Mapping, Set, Type
+from typing import Any, Callable, Dict
 
 import torch
-import torch.nn.functional as F
-from torch import Tensor, nn, optim
+from torch import Tensor, optim
 from torch.distributions import Categorical
 from torch.utils.data import DataLoader, TensorDataset
 
 from jargon.core import Batch, Trainer
 from jargon.game import SupervisedGame
-from jargon.net import MultiDiscreteMLP
-from jargon.net.loss import pg_loss
 from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
+
+from .metrics import Metrics
 
 
 def train(
@@ -55,44 +54,25 @@ def train(
     game.apply(init_weights)
     optimizer = optim.Adam(game.parameters(), lr=lr)
 
+    metrics_fn = Metrics(num_elems, num_attrs, loss_fn)
+
     def test_fn(epoch: int) -> None:
-        if metrics_fn is None:
-            return
+        train_batch = game(train_dataset, train_dataset)
+        test_batch = game(test_dataset, test_dataset)
 
-        metrics = {
-            f"train/{k}": v
-            for k, v in metrics_fn(game(train_dataset, train_dataset)).items()
-        }
-        metrics |= {
-            f"test/{k}": v
-            for k, v in metrics_fn(game(test_dataset, test_dataset)).items()
-        }
+        metrics = {}
+        metrics |= {f"train/{k}": v for k, v in metrics_fn(train_batch).items()}
+        metrics |= {f"test/{k}": v for k, v in metrics_fn(test_batch).items()}
+
+        if additional_metrics_fn is not None:
+            metrics |= {
+                f"train/{k}": v for k, v in additional_metrics_fn(train_batch).items()
+            }
+            metrics |= {
+                f"test/{k}": v for k, v in additional_metrics_fn(test_batch).items()
+            }
+
         logger.log(epoch, metrics)
-
-    def metrics_fn(batch: Batch) -> Dict[str, Any]:
-        output: Tensor = batch.output  # type: ignore
-        target: Tensor = batch.target  # type: ignore
-        loss = loss_fn(batch)
-
-        acc_flag = output.reshape(-1, num_attrs, num_elems).argmax(-1) == target
-        acc_comp = acc_flag.all(-1).float()
-        acc_part = acc_flag.float()
-
-        distr = Categorical(logits=output)
-        entropy: Tensor = distr.entropy()
-
-        metrics = {
-            "loss.mean": loss.mean().item(),
-            "acc_comp.mean": acc_comp.mean().item(),
-            "acc_part.mean": acc_part.mean().item(),
-            "entropy.mean": entropy.mean().item(),
-            "loss.std": loss.std().item(),
-            "acc_comp.std": acc_comp.std().item(),
-            "acc_part.std": acc_part.std().item(),
-            "entropy.std": entropy.std().item(),
-        }
-        metrics |= additional_metrics_fn(batch)
-        return metrics
 
     trainer = Trainer(
         model=game,
