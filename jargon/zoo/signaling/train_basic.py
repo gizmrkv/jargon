@@ -1,0 +1,114 @@
+import itertools
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Mapping, Type
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from numpy.typing import NDArray
+from torch import Tensor, nn, optim
+from torch.distributions import Categorical
+from torch.utils.data import DataLoader, TensorDataset
+
+from jargon.core import Batch, Trainer
+from jargon.game import SignalingGame
+from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
+from jargon.net.functional import Sampler
+from jargon.net.loss import pg_loss
+from jargon.utils import BaseLogger, fix_seed, init_weights, random_split
+from jargon.utils.analysis import topographic_similarity
+
+from .loss import Loss
+from .train import train
+
+
+def train_basic(
+    num_elems: int = 50,
+    num_attrs: int = 2,
+    vocab_size: int = 50,
+    max_len: int = 8,
+    entropy_loss_weight: float = 0.0,
+    length_loss_weight: float = 0.0,
+    encoder_embedding_dim: int = 8,
+    encoder_hidden_sizes: List[int] = [64],
+    encoder_activation_type: Type[nn.Module] | str = nn.GELU,
+    encoder_activation_args: Dict[str, Any] | None = None,
+    encoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
+    encoder_normalization_args: Dict[str, Any] | None = None,
+    encoder_dropout: float = 0.0,
+    sender_input_dim: int = 64,
+    sender_embedding_dim: int = 8,
+    sender_hidden_size: int = 128,
+    sender_num_layers: int = 2,
+    sender_cell_type: Type[nn.Module] | str = nn.GRU,
+    sender_cell_args: Dict[str, Any] | None = None,
+    decoder_hidden_sizes: List[int] = [64],
+    decoder_activation_type: Type[nn.Module] | str = nn.GELU,
+    decoder_activation_args: Dict[str, Any] | None = None,
+    decoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
+    decoder_normalization_args: Dict[str, Any] | None = None,
+    decoder_dropout: float = 0.0,
+    receiver_output_dim: int = 64,
+    receiver_embedding_dim: int = 8,
+    receiver_hidden_size: int = 128,
+    receiver_num_layers: int = 2,
+    receiver_cell_type: Type[nn.Module] | str = nn.GRU,
+    receiver_cell_args: Dict[str, Any] | None = None,
+    **train_args: Any,
+) -> None:
+    encoder = MultiDiscreteMLP(
+        high=num_elems,
+        n=num_elems,
+        output_dim=sender_input_dim,
+        embedding_dim=encoder_embedding_dim,
+        hidden_sizes=encoder_hidden_sizes,
+        activation_type=encoder_activation_type,
+        activation_args=encoder_activation_args,
+        normalization_type=encoder_normalization_type,
+        normalization_args=encoder_normalization_args,
+        dropout=encoder_dropout,
+    )
+    sender = Sender(
+        encoder=encoder,
+        input_dim=sender_input_dim,
+        vocab_size=vocab_size,
+        length=max_len,
+        embedding_dim=sender_embedding_dim,
+        hidden_size=sender_hidden_size,
+        num_layers=sender_num_layers,
+        cell_type=sender_cell_type,
+        cell_args=sender_cell_args,
+    )
+    decoder = MLP(
+        input_dim=receiver_output_dim,
+        output_dim=num_elems * num_attrs,
+        hidden_sizes=decoder_hidden_sizes,
+        activation_type=decoder_activation_type,
+        activation_args=decoder_activation_args,
+        normalization_type=decoder_normalization_type,
+        normalization_args=decoder_normalization_args,
+        dropout=decoder_dropout,
+    )
+    receiver = Receiver(
+        decoder=decoder,
+        vocab_size=vocab_size,
+        output_dim=receiver_output_dim,
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        embedding_dim=receiver_embedding_dim,
+        hidden_size=receiver_hidden_size,
+        num_layers=receiver_num_layers,
+        cell_type=receiver_cell_type,
+        cell_args=receiver_cell_args,
+    )
+    game = SignalingGame(sender, receiver)
+    loss = Loss(num_elems, num_attrs, entropy_loss_weight, length_loss_weight)
+    train(
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        vocab_size=vocab_size,
+        max_len=max_len,
+        game=game,
+        loss_fn=loss,
+        **train_args,
+    )
