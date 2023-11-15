@@ -10,16 +10,16 @@ from .train import train
 
 
 def train_mlp(
-    num_elems: int,
-    num_attrs: int,
-    embedding_dim: int,
-    hidden_sizes: List[int],
+    num_elems: int = 50,
+    num_attrs: int = 2,
+    embedding_dim: int = 8,
+    hidden_sizes: List[int] = [64],
     activation_type: Type[nn.Module] | str = nn.ReLU,
     activation_args: Dict[str, Any] | None = None,
     normalization_type: Type[nn.Module] | str | None = None,
     normalization_args: Dict[str, Any] | None = None,
     dropout: float = 0.0,
-    **kwargs: Any,
+    **train_args: Any,
 ) -> None:
     model = MultiDiscreteMLP(
         high=num_elems,
@@ -35,4 +35,10 @@ def train_mlp(
     )
     game = SupervisedGame(model)
     loss = Loss(num_elems, num_attrs)
-    train(game=game, loss_fn=loss, **kwargs)
+    train(
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        game=game,
+        loss_fn=loss,
+        **train_args,
+    )
