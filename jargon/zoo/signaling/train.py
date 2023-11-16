@@ -8,24 +8,31 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from jargon.core import Batch, Trainer
 from jargon.game import SignalingGame
-from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
+from jargon.utils import (
+    BaseLogger,
+    DummyLogger,
+    fix_seed,
+    init_weights,
+    make_log_dir,
+    random_split,
+)
 
 from .metrics import Metrics
 
 
 def train(
-    num_elems: int,
-    num_attrs: int,
-    train_proportion: float,
-    test_proportion: float,
-    vocab_size: int,
-    max_len: int,
     game: SignalingGame,
     loss_fn: Callable[[Batch], Tensor],
-    max_epochs: int,
-    batch_size: int,
-    lr: float,
-    test_per_epoch: int,
+    num_elems: int = 50,
+    num_attrs: int = 2,
+    train_proportion: float = 0.8,
+    test_proportion: float = 0.2,
+    vocab_size: int = 50,
+    max_len: int = 8,
+    max_epochs: int = 5000,
+    batch_size: int = 4096,
+    lr: float = 1e-3,
+    test_per_epoch: int = 25,
     seed: int | None = None,
     show_progress: bool = True,
     use_amp: bool = False,
@@ -36,6 +43,8 @@ def train(
         fix_seed(seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    log_dir = make_log_dir()
 
     dataset = (
         torch.Tensor(list(itertools.product(torch.arange(num_elems), repeat=num_attrs)))
@@ -52,11 +61,13 @@ def train(
         shuffle=True,
     )
 
+    torch.save(game.state_dict(), log_dir / "initial.pth")
+
     game = game.to(device)
     game.apply(init_weights)
     optimizer = optim.Adam(game.parameters(), lr=lr)
 
-    metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len, loss_fn)
+    metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len)
 
     def test_fn(epoch: int) -> None:
         train_batch = game(train_dataset, train_dataset)
@@ -91,10 +102,11 @@ def train(
 
     logger.close()
 
+    torch.save(game.state_dict(), log_dir / "final.pth")
+
     return {
         "epoch": epoch,
         "elapsed_time": elapsed_time,
         "train_dataset": train_dataset,
         "test_dataset": test_dataset,
-        "game": game,
     }

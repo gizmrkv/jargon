@@ -32,7 +32,7 @@ class Loss:
         self.length_loss_weight = length_loss_weight
 
     def __call__(self, batch: Batch) -> Tensor:
-        output: Tensor = batch.output  # type: ignore
+        logits: Tensor = batch.output_logits  # type: ignore
         target: Tensor = batch.target  # type: ignore
         message: Tensor = batch.message  # type: ignore
         msg_logits: Tensor = batch.message_logits  # type: ignore
@@ -44,9 +44,9 @@ class Loss:
         # loss_r = F.cross_entropy(output, target, reduction="none")
         # loss_r = loss_r.reshape(-1, max_len, num_attrs).mean(-1)
 
-        output = output[:, -1, :].reshape(-1, self.num_elems)
+        logits = logits.reshape(-1, self.num_elems)
         target = target.reshape(-1)
-        loss_r = F.cross_entropy(output, target, reduction="none")
+        loss_r = F.cross_entropy(logits, target, reduction="none")
         loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
 
         distr = Categorical(logits=msg_logits)
@@ -80,3 +80,7 @@ class Loss:
             loss += loss_len
 
         return loss
+
+    def metrics(self, batch: Batch) -> Dict[str, Any]:
+        loss = self(batch)
+        return {"loss/mean": loss.mean().item(), "loss/std": loss.std().item()}

@@ -1,25 +1,11 @@
-import itertools
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Mapping, Type
+from typing import Any, Dict, List, Type
 
-import numpy as np
-import torch
-import torch.nn.functional as F
-from numpy.typing import NDArray
-from torch import Tensor, nn, optim
-from torch.distributions import Categorical
-from torch.utils.data import DataLoader, TensorDataset
+from torch import nn
 
-from jargon.core import Batch, Trainer
 from jargon.game import SignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
-from jargon.net.functional import Sampler
-from jargon.net.loss import pg_loss
-from jargon.utils import BaseLogger, fix_seed, init_weights, random_split
-from jargon.utils.analysis import topographic_similarity
-
-from .loss import Loss
-from .train import train
+from jargon.zoo.signaling.loss import Loss
+from jargon.zoo.signaling.train import train
 
 
 def train_basic(
@@ -38,7 +24,7 @@ def train_basic(
     encoder_dropout: float = 0.0,
     sender_input_dim: int = 64,
     sender_embedding_dim: int = 8,
-    sender_hidden_size: int = 128,
+    sender_hidden_size: int = 256,
     sender_num_layers: int = 2,
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
@@ -50,7 +36,7 @@ def train_basic(
     decoder_dropout: float = 0.0,
     receiver_output_dim: int = 64,
     receiver_embedding_dim: int = 8,
-    receiver_hidden_size: int = 128,
+    receiver_hidden_size: int = 256,
     receiver_num_layers: int = 2,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
@@ -58,7 +44,7 @@ def train_basic(
 ) -> None:
     encoder = MultiDiscreteMLP(
         high=num_elems,
-        n=num_elems,
+        n=num_attrs,
         output_dim=sender_input_dim,
         embedding_dim=encoder_embedding_dim,
         hidden_sizes=encoder_hidden_sizes,
@@ -110,5 +96,6 @@ def train_basic(
         max_len=max_len,
         game=game,
         loss_fn=loss,
+        additional_metrics_fn=loss.metrics,
         **train_args,
     )

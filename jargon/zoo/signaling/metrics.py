@@ -25,13 +25,11 @@ class Metrics:
         num_attrs: int,
         vocab_size: int,
         max_len: int,
-        loss_fn: Callable[[Batch], Tensor],
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
         self.vocab_size = vocab_size
         self.max_len = max_len
-        self.loss_fn = loss_fn
 
     def __call__(self, batch: Batch) -> Dict[str, Any]:
         input: Tensor = batch.input  # type: ignore
@@ -42,12 +40,7 @@ class Metrics:
         msg_mask: Tensor = batch.message_mask  # type: ignore
         msg_length: Tensor = batch.message_length  # type: ignore
 
-        loss = self.loss_fn(batch)
-
-        output = output[:, -1, :]
-        acc_flag = (
-            output.reshape(-1, self.num_attrs, self.num_elems).argmax(-1) == target
-        )
+        acc_flag = output == target
         acc_comp = acc_flag.all(-1).float()
         acc_part = acc_flag.float()
 
@@ -71,8 +64,6 @@ class Metrics:
         )
 
         return {
-            "loss/mean": loss.mean().item(),
-            "loss/std": loss.std().item(),
             "acc/comp.mean": acc_comp.mean().item(),
             "acc/comp.std": acc_comp.std().item(),
             "acc/part.mean": acc_part.mean().item(),
