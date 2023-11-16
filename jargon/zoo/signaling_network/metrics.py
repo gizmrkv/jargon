@@ -143,6 +143,7 @@ def topsim_metrics(batch: Batch) -> Dict[str, float]:
         )
         metrics[f"topsim/{name_s}"] = topsim
 
+    metrics["topsim/mean"] = np.mean(list(metrics.values()))
     return metrics
 
 
@@ -156,6 +157,7 @@ def langsim_metrics(batch: Batch) -> Dict[str, float]:
             ls = language_similarity(m1, m2, processor=drop_padding)
             metrics[f"langsim/{names_s[i]}-{names_s[j]}"] = ls
 
+    metrics["langsim/mean"] = np.mean(list(metrics.values()))
     return metrics
 
 
