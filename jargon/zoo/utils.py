@@ -16,9 +16,7 @@ def wandb_sweep(
         sweep_id = wandb.sweep(sweep=config, project=project)
 
     def func() -> None:
-        dt = datetime.datetime.now()
-        name = dt.strftime("%Y/%m/%d %H:%M:%S.%f")
-        logger = WandbLogger(prefix=prefix, name=name)
+        logger = WandbLogger(prefix=prefix)
         main(logger=logger, **wandb.config)
 
     wandb.agent(sweep_id, func, project=project)

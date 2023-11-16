@@ -1,3 +1,4 @@
+import datetime
 from typing import Any, Mapping
 
 import wandb
@@ -27,6 +28,10 @@ class WandbLogger(BaseLogger):
 
     def __init__(self, prefix: str = "", **wandb_config: Any) -> None:
         self.prefix = prefix
+        if "name" not in wandb_config:
+            dt = datetime.datetime.now()
+            name = dt.strftime("%Y/%m/%d %H:%M:%S.%f")
+            wandb_config["name"] = name
         wandb.init(**wandb_config)
 
     def log(self, epoch: int, data: Mapping[str, Any]) -> None:
