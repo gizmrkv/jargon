@@ -18,17 +18,17 @@ from ..core import Batch
 from ..net.functional import padding_mask
 
 
-class MultiSignalingGame(nn.Module):
+class SignalingNetworkGame(nn.Module):
     def __init__(
         self,
         senders: Mapping[str, nn.Module],
         receivers: Mapping[str, nn.Module],
-        channels: Mapping[str, Set[str]],
+        network: Mapping[str, Set[str]],
     ) -> None:
         super().__init__()
         self.senders = nn.ModuleDict(senders)
         self.receivers = nn.ModuleDict(receivers)
-        self.channels = channels
+        self.network = network
 
     def forward(self, input: Tensor, target: Tensor) -> Batch:
         messages = {}
@@ -51,7 +51,7 @@ class MultiSignalingGame(nn.Module):
         outputs_logits: Dict[str, Dict[str, Tensor]] = {
             sender_name: {} for sender_name in self.senders.keys()
         }
-        for name_s, names_r in self.channels.items():
+        for name_s, names_r in self.network.items():
             for name_r in names_r:
                 output, logits = self.receivers[name_r](messages[name_s])
                 outputs[name_s][name_r] = output

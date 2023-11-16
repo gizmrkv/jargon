@@ -1,9 +1,9 @@
-from .multi_signaling import MultiSignalingGame
 from .signaling import SignalingGame
+from .signaling_network import SignalingNetworkGame
 from .supervised import SupervisedGame
 
 __all__ = [
     "SignalingGame",
-    "MultiSignalingGame",
+    "SignalingNetworkGame",
     "SupervisedGame",
 ]
