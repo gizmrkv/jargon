@@ -3,12 +3,18 @@ from typing import Any, Callable, Dict
 
 import torch
 from torch import Tensor, optim
-from torch.distributions import Categorical
 from torch.utils.data import DataLoader, TensorDataset
 
 from jargon.core import Batch, Trainer
 from jargon.game import SupervisedGame
-from jargon.utils import BaseLogger, DummyLogger, fix_seed, init_weights, random_split
+from jargon.utils import (
+    BaseLogger,
+    DummyLogger,
+    fix_seed,
+    init_weights,
+    make_log_dir,
+    random_split,
+)
 
 from .metrics import Metrics
 
@@ -35,6 +41,8 @@ def train(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    log_dir = make_log_dir()
+
     dataset = (
         torch.Tensor(list(itertools.product(torch.arange(num_elems), repeat=num_attrs)))
         .long()
@@ -50,11 +58,13 @@ def train(
         shuffle=True,
     )
 
+    torch.save(game.state_dict(), log_dir / "initial.pth")
+
     game = game.to(device)
     game.apply(init_weights)
     optimizer = optim.Adam(game.parameters(), lr=lr)
 
-    metrics_fn = Metrics(num_elems, num_attrs, loss_fn)
+    metrics_fn = Metrics(num_elems, num_attrs)
 
     def test_fn(epoch: int) -> None:
         train_batch = game(train_dataset, train_dataset)
@@ -89,10 +99,11 @@ def train(
 
     logger.close()
 
+    torch.save(game.state_dict(), log_dir / "final.pth")
+
     return {
         "epoch": epoch,
         "elapsed_time": elapsed_time,
         "train_dataset": train_dataset,
         "test_dataset": test_dataset,
-        "game": game,
     }

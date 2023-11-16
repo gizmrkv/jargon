@@ -4,9 +4,8 @@ from torch import nn
 
 from jargon.game import SupervisedGame
 from jargon.net import MultiDiscreteMLP
-
-from .loss import Loss
-from .train import train
+from jargon.zoo.identity.loss import Loss
+from jargon.zoo.identity.train import train
 
 
 def train_mlp(
@@ -40,5 +39,6 @@ def train_mlp(
         num_attrs=num_attrs,
         game=game,
         loss_fn=loss,
+        additional_metrics_fn=loss.metrics,
         **train_args,
     )

@@ -1,3 +1,5 @@
+from typing import Any, Dict
+
 from torch import Tensor
 from torch.nn import functional as F
 
@@ -22,3 +24,7 @@ class Loss:
         loss = F.cross_entropy(output, target, reduction="none")
         loss = loss.reshape(-1, self.num_attrs).mean(-1)
         return loss
+
+    def metrics(self, batch: Batch) -> Dict[str, Any]:
+        loss = self(batch)
+        return {"loss/mean": loss.mean().item(), "loss/std": loss.std().item()}
