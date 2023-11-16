@@ -201,5 +201,59 @@ class Loss:
         return loss
 
     def metrics(self, batch: Batch) -> Dict[str, float]:
-        loss = self(batch)
-        return {"loss/mean": loss.mean().item(), "loss/std": loss.std().item()}
+        receiver_communication_losses = self.receiver_communication_losses(batch)
+        sender_communication_losses = self.sender_communication_loss(
+            batch, receiver_communication_losses
+        )
+        sender_imitation_losses = self.sender_imitation_losses(batch)
+        sender_entropy_losses = self.sender_entropy_loss(batch)
+        sender_length_losses = self.sender_length_loss(batch)
+        sender_losses = self.sender_loss(
+            sender_communication_losses,
+            sender_imitation_losses,
+            sender_entropy_losses,
+            sender_length_losses,
+        )
+        receiver_losses = self.receiver_loss(receiver_communication_losses)
+
+        metrics: Dict[str, float] = {}
+        for name_s, losses in receiver_communication_losses.items():
+            for name_r, loss in losses.items():
+                metrics |= {
+                    f"loss/com/{name_s}->{name_r}.mean": loss.mean().item(),
+                    f"loss/com/{name_s}->{name_r}.std": loss.std().item(),
+                }
+
+        for name_s, loss in sender_communication_losses.items():
+            metrics |= {
+                f"loss/com/{name_s}.mean": loss.mean().item(),
+                f"loss/com/{name_s}.std": loss.std().item(),
+            }
+        for name_s1, losses in sender_imitation_losses.items():
+            for name_s2, loss in losses.items():
+                metrics |= {
+                    f"loss/imi/{name_s1}->{name_s2}.mean": loss.mean().item(),
+                    f"loss/imi/{name_s1}->{name_s2}.std": loss.std().item(),
+                }
+        for name_s, loss in sender_entropy_losses.items():
+            metrics |= {
+                f"loss/ent/{name_s}.mean": loss.mean().item(),
+                f"loss/ent/{name_s}.std": loss.std().item(),
+            }
+        for name_s, loss in sender_length_losses.items():
+            metrics |= {
+                f"loss/len/{name_s}.mean": loss.mean().item(),
+                f"loss/len/{name_s}.std": loss.std().item(),
+            }
+        for name_s, loss in sender_losses.items():
+            metrics |= {
+                f"loss/{name_s}.mean": loss.mean().item(),
+                f"loss/{name_s}.std": loss.std().item(),
+            }
+        for name_r, loss in receiver_losses.items():
+            metrics |= {
+                f"loss/{name_r}.mean": loss.mean().item(),
+                f"loss/{name_r}.std": loss.std().item(),
+            }
+
+        return metrics
