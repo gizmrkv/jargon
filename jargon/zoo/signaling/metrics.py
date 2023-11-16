@@ -32,7 +32,6 @@ class Metrics:
         self.max_len = max_len
 
     def __call__(self, batch: Batch) -> Dict[str, Any]:
-        input: Tensor = batch.input  # type: ignore
         output: Tensor = batch.output  # type: ignore
         target: Tensor = batch.target  # type: ignore
         message: Tensor = batch.message  # type: ignore
@@ -53,6 +52,22 @@ class Metrics:
 
         unique = message.unique(dim=0).shape[0] / message.shape[0]
 
+        return {
+            "acc/comp.mean": acc_comp.mean().item(),
+            "acc/comp.std": acc_comp.std().item(),
+            "acc/part.mean": acc_part.mean().item(),
+            "acc/part.std": acc_part.std().item(),
+            "msg/entropy.mean": entropy_s.mean().item(),
+            "msg/entropy.std": entropy_s.std().item(),
+            "msg/length.mean": msg_length.mean().item(),
+            "msg/length.std": msg_length.std().item(),
+            "msg/unique": unique,
+        }
+
+    def heavy_test(self, batch: Batch) -> Dict[str, Any]:
+        input: Tensor = batch.input
+        message: Tensor = batch.message
+
         def drop_padding(x: NDArray[np.int32]) -> NDArray[np.int32]:
             i = np.argwhere(x == 0)
             return x if len(i) == 0 else x[: i[0, 0]]
@@ -64,14 +79,5 @@ class Metrics:
         )
 
         return {
-            "acc/comp.mean": acc_comp.mean().item(),
-            "acc/comp.std": acc_comp.std().item(),
-            "acc/part.mean": acc_part.mean().item(),
-            "acc/part.std": acc_part.std().item(),
-            "msg/entropy.mean": entropy_s.mean().item(),
-            "msg/entropy.std": entropy_s.std().item(),
-            "msg/length.mean": msg_length.mean().item(),
-            "msg/length.std": msg_length.std().item(),
-            "msg/unique": unique,
             "topsim/mean": topsim,
         }

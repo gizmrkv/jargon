@@ -3,7 +3,6 @@ from typing import Any, Callable, Dict
 
 import torch
 from torch import Tensor, optim
-from torch.distributions import Categorical
 from torch.utils.data import DataLoader, TensorDataset
 
 from jargon.core import Batch, Trainer
@@ -33,6 +32,7 @@ def train(
     batch_size: int = 4096,
     lr: float = 1e-3,
     test_per_epoch: int = 25,
+    heavy_test_per_test: int = 8,
     seed: int | None = None,
     show_progress: bool = True,
     use_amp: bool = False,
@@ -72,6 +72,13 @@ def train(
     def test_fn(epoch: int) -> None:
         train_batch = game(train_dataset, train_dataset)
         test_batch = game(test_dataset, test_dataset)
+
+        train_metrics = metrics_fn(train_batch)
+        test_metrics = metrics_fn(test_batch)
+
+        if (epoch // test_per_epoch) % heavy_test_per_test == 0:
+            train_metrics |= metrics_fn.heavy_test(train_batch)
+            test_metrics |= metrics_fn.heavy_test(test_batch)
 
         metrics = {}
         metrics |= {f"train/{k}": v for k, v in metrics_fn(train_batch).items()}
