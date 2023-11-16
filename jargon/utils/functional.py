@@ -1,4 +1,7 @@
+import datetime
+import os
 import random
+from pathlib import Path
 from typing import Iterable, List
 
 import numpy as np
@@ -91,3 +94,18 @@ def fix_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+
+
+def make_log_dir() -> Path:
+    """make log directory and return its path
+
+    Returns
+    -------
+    Path
+        log directory path
+    """
+    dt = datetime.datetime.now()
+    name = dt.strftime("%Y-%m-%d %H-%M-%S-%f")
+    log_dir = Path("jargon-logs", name)
+    os.makedirs(log_dir, exist_ok=True)
+    return log_dir
