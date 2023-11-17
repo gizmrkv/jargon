@@ -114,8 +114,8 @@ class RNN(nn.Module):
 
         Parameters
         ----------
-        max_len : int
-            The maximum length of the sequence.
+        length : int
+            The length of the sequence.
         embedding : nn.Embedding
             The embedding layer.
         start_embedding : Tensor
@@ -162,4 +162,4 @@ class RNN(nn.Module):
         sequence = torch.cat(symbol_list, dim=1)
         logits = torch.cat(logits_list, dim=1)
 
-        return sequence, logits
+        return sequence, logits, state

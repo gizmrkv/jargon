@@ -23,6 +23,10 @@ class Receiver(nn.Module):
         The size of the vocabulary.
     output_dim : int
         The dimension of the output.
+    num_elems : int
+        The number of elements.
+    num_attrs : int
+        The number of attributes.
     embedding_dim : int
         The dimension of the embedding.
     hidden_size : int
@@ -36,20 +40,22 @@ class Receiver(nn.Module):
 
     Examples
     --------
-    >>> decoder = nn.Linear(32, 5)
+    >>> decoder = nn.Linear(32, 20)
     >>> receiver = Receiver(
     ...     decoder=decoder,
     ...     vocab_size=50,
     ...     output_dim=32,
+    ...     num_elems=10,
+    ...     num_attrs=2,
     ...     embedding_dim=8,
     ...     hidden_size=64,
     ...     num_layers=2,
     ...     cell_type=nn.GRU,
     ... )
     >>> x = torch.randint(0, 50, (64, 10))
-    >>> output = receiver(x)
+    >>> output, logits = receiver(x)
     >>> output.shape
-    torch.Size([64, 10, 5])
+    torch.Size([64, 2])
     """
 
     def __init__(

@@ -97,7 +97,7 @@ class Sender(nn.Module):
             hidden = (hidden, torch.zeros_like(hidden))
 
         start = self.start.repeat(x.shape[0], 1)
-        sequence, logits = self.decoder.generate_discrete_sequence(
+        sequence, logits, _ = self.decoder.generate_discrete_sequence(
             length=self.length,
             embedding=self.embedding,
             start_embedding=start,
