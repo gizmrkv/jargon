@@ -106,17 +106,13 @@ def train(
             )
             test_metrics |= metrics_test_fn.heavy_test(test_batch, test_metrics, epoch)
 
+        if additional_metrics_fn is not None:
+            train_metrics |= additional_metrics_fn(train_batch)
+            test_metrics |= additional_metrics_fn(test_batch)
+
         metrics = {}
         metrics |= {f"train/{k}": v for k, v in train_metrics.items()}
         metrics |= {f"test/{k}": v for k, v in test_metrics.items()}
-
-        if additional_metrics_fn is not None:
-            metrics |= {
-                f"train/{k}": v for k, v in additional_metrics_fn(train_batch).items()
-            }
-            metrics |= {
-                f"test/{k}": v for k, v in additional_metrics_fn(test_batch).items()
-            }
 
         logger.log(epoch, metrics)
 
