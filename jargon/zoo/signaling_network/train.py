@@ -140,6 +140,8 @@ def train(
         f"test/movie/{k}": v for k, v in metrics_test_fn.frames_to_movies().items()
     }
 
+    logger.log_movies(epoch, movies)
+    logger.flush()
     logger.close()
 
     return {
