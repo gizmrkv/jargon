@@ -9,7 +9,7 @@ from jargon.zoo.signaling_network.loss import Loss
 from jargon.zoo.signaling_network.train import train
 
 
-def train_basic(
+def train_complete(
     num_elems: int = 50,
     num_attrs: int = 2,
     vocab_size: int = 50,
