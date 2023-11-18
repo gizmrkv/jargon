@@ -1,21 +1,11 @@
-import itertools
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, Mapping
+from typing import Any, Dict
 
-import numpy as np
-import torch
 import torch.nn.functional as F
-from numpy.typing import NDArray
-from torch import Tensor, nn, optim
+from torch import Tensor
 from torch.distributions import Categorical
-from torch.utils.data import DataLoader, TensorDataset
 
-from jargon.core import Batch, Trainer
-from jargon.game import SignalingGame
-from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
+from jargon.core import Batch
 from jargon.net.loss import pg_loss
-from jargon.utils import BaseLogger, fix_seed, init_weights, random_split
-from jargon.utils.analysis import topographic_similarity
 
 
 class Loss:
@@ -42,8 +32,6 @@ class Loss:
         return loss_r
 
     def sender_loss(self, batch: Batch, receiver_loss: Tensor) -> Tensor:
-        logits: Tensor = batch.output_logits  # type: ignore
-        target: Tensor = batch.target  # type: ignore
         message: Tensor = batch.message  # type: ignore
         msg_logits: Tensor = batch.message_logits  # type: ignore
         msg_mask: Tensor = batch.message_mask  # type: ignore
