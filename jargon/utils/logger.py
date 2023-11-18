@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 from typing import Any, Mapping
 
 import wandb
@@ -8,6 +9,9 @@ class BaseLogger:
     """The base class for loggers."""
 
     def log(self, epoch: int, data: Mapping[str, Any]) -> None:
+        pass
+
+    def log_movies(self, epoch: int, movies: Mapping[str, Path]) -> None:
         pass
 
     def flush(self) -> None:
@@ -36,6 +40,12 @@ class WandbLogger(BaseLogger):
 
     def log(self, epoch: int, data: Mapping[str, Any]) -> None:
         metrics = {f"{self.prefix}{k}": v for k, v in data.items()}
+        wandb.log(metrics, step=epoch, commit=False)
+
+    def log_movies(self, epoch: int, movies: Mapping[str, Path]) -> None:
+        metrics = {
+            f"{self.prefix}{k}": wandb.Video(v.as_posix()) for k, v in movies.items()
+        }
         wandb.log(metrics, step=epoch, commit=False)
 
     def flush(self) -> None:
