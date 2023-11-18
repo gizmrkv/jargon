@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from moviepy.editor import ImageSequenceClip
 from numpy.typing import NDArray
 from torch import Tensor
 from torch.distributions import Categorical
@@ -43,6 +44,16 @@ class Metrics:
         os.makedirs(self.acc_df_dir, exist_ok=True)
         os.makedirs(self.langsim_df_dir, exist_ok=True)
 
+        self.heatmap_kwargs = {
+            "vmin": 0,
+            "vmax": 1,
+            "cmap": "viridis",
+            "annot": True,
+            "fmt": ".2f",
+            "cbar": True,
+            "square": True,
+        }
+
     def __call__(self, batch: Batch) -> Dict[str, float]:
         return accuracy_metrics(batch) | message_metrics(
             batch, self.vocab_size, self.max_len
@@ -55,10 +66,25 @@ class Metrics:
 
         acc_df = accuracy_dataframe(metrics, self.senders, self.receivers)
         langsim_df = langsim_dataframe(heavy_metrics, self.senders)
-        dataframe_to_image(acc_df, epoch, self.acc_df_dir)
-        dataframe_to_image(langsim_df, epoch, self.langsim_df_dir)
+        dataframe_to_image(acc_df, epoch, self.acc_df_dir, self.heatmap_kwargs)
+        dataframe_to_image(langsim_df, epoch, self.langsim_df_dir, self.heatmap_kwargs)
 
         return heavy_metrics
+
+    def frames_to_movies(self) -> Dict[str, Path]:
+        movie_paths = {}
+        for df_dir, df_name in [
+            (self.acc_df_dir, "acc"),
+            (self.langsim_df_dir, "langsim"),
+        ]:
+            frame_paths = list(df_dir.glob("*.png"))
+            frame_paths = sorted([f.as_posix() for f in frame_paths])
+            path = df_dir.joinpath("video.mp4")
+            clip = ImageSequenceClip(frame_paths, fps=10)
+            clip.write_videofile(path.as_posix())
+            movie_paths[df_name] = path
+
+        return movie_paths
 
 
 def accuracy_metrics(batch: Batch) -> Dict[str, float]:
@@ -180,17 +206,13 @@ def drop_padding(x: NDArray[np.int32]) -> NDArray[np.int32]:
     return x if len(i) == 0 else x[: i[0, 0]]
 
 
-def dataframe_to_image(df: pd.DataFrame, epoch: int, save_dir: Path) -> None:
-    sns.heatmap(
-        df,
-        vmin=0,
-        vmax=1,
-        cmap="viridis",
-        annot=True,
-        fmt=".2f",
-        cbar=True,
-        square=True,
-    )
+def dataframe_to_image(
+    df: pd.DataFrame,
+    epoch: int,
+    save_dir: Path,
+    heatmap_kwargs: Dict[str, Any] = {},
+) -> None:
+    sns.heatmap(df, **heatmap_kwargs)
     plt.title(f"Epoch {epoch}")
     path = save_dir.joinpath(f"{epoch:0>8}.png")
     plt.savefig(path)

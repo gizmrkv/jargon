@@ -131,9 +131,16 @@ def train(
     )
     epoch, elapsed_time = trainer.run()
 
-    logger.close()
-
     torch.save(game, log_dir / "final.pth")
+
+    movies = {
+        f"train/movie/{k}": v for k, v in metrics_train_fn.frames_to_movies().items()
+    }
+    movies |= {
+        f"test/movie/{k}": v for k, v in metrics_test_fn.frames_to_movies().items()
+    }
+
+    logger.close()
 
     return {
         "epoch": epoch,
