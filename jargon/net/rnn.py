@@ -57,51 +57,6 @@ class RNN(nn.Module):
         x, state = self.cells(x, state)
         return x, state
 
-    def generate_continuous_sequence(
-        self,
-        length: int,
-        start_embedding: Tensor,
-        state: Any = None,
-        output_layer: nn.Module | None = None,
-    ) -> Tuple[Tensor, Any]:
-        """Generate a continuous sequence.
-
-        Parameters
-        ----------
-        max_len : int
-            The maximum length of the sequence.
-        start_embedding : Tensor
-            The start embedding.
-            The size is (batch_size, embedding_dim).
-        state : Any, optional
-            The initial state, by default None
-        output_layer : nn.Module | None, optional
-            The output layer, by default None
-
-        Returns
-        -------
-        Tuple[Tensor, Tensor | Tuple[Tensor, Tensor]]
-            The sequence and the final state.
-
-        Examples
-        --------
-        >>> rnn = RNN(8, 32)
-        >>> sos = torch.randn(32).unsqueeze(0).repeat(100, 1)
-        >>> linear = nn.Linear(32, 8)
-        >>> y, _ = rnn.generate_continuous_sequence(10, sos, output_layer=linear)
-        >>> y.shape
-        torch.Size([100, 10, 8])
-        """
-        x = start_embedding.unsqueeze(1)
-        sequence = []
-        for _ in range(length):
-            x, state = self.forward(x, state)
-            if output_layer is not None:
-                x = output_layer(x)
-            sequence.append(x)
-
-        return torch.cat(sequence, dim=1), state
-
     def generate_discrete_sequence(
         self,
         length: int,
