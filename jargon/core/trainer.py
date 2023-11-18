@@ -58,6 +58,8 @@ class Trainer:
         early_stop: Callable[[int], bool] | None = None,
         show_progress: bool = True,
         use_amp: bool = True,
+        epoch_begin_fn: Callable[[int], None] | None = None,
+        epoch_end_fn: Callable[[int], None] | None = None,
     ) -> None:
         self.model = model
         self.optim = optim
@@ -68,6 +70,8 @@ class Trainer:
         self.test_fn = test_fn
         self.early_stop = early_stop
         self.show_progress = show_progress
+        self.epoch_begin_fn = epoch_begin_fn
+        self.epoch_end_fn = epoch_end_fn
 
         if use_amp and not torch.cuda.is_available():
             print("CUDA is not available. Use CPU instead.")
@@ -97,6 +101,9 @@ class Trainer:
         for epoch in range(self.max_epochs):
             self.model.train()
             losses.clear()
+
+            if self.epoch_begin_fn:
+                self.epoch_begin_fn(epoch)
 
             for data in self.dataloader:
                 with self.amp.autocast(enabled=self.use_amp, dtype=self.dtype):
@@ -131,6 +138,9 @@ class Trainer:
 
             if self.early_stop and self.early_stop(epoch):
                 break
+
+            if self.epoch_end_fn:
+                self.epoch_end_fn(epoch)
 
         prog.close()
         elapsed_time = time.time() - elapsed_time

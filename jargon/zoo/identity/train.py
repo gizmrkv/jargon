@@ -35,6 +35,8 @@ def train(
     use_amp: bool = False,
     logger: BaseLogger = DummyLogger(),
     additional_metrics_fn: Callable[[Batch], Dict[str, Any]] = lambda _: {},
+    epoch_begin_fn: Callable[[int], None] | None = None,
+    epoch_end_fn: Callable[[int], None] | None = None,
 ) -> Dict[str, Any]:
     if seed is not None:
         fix_seed(seed)
@@ -94,6 +96,8 @@ def train(
         test_fn=test_fn,
         show_progress=show_progress,
         use_amp=use_amp,
+        epoch_begin_fn=epoch_begin_fn,
+        epoch_end_fn=epoch_end_fn,
     )
     epoch, elapsed_time = trainer.run()
 
