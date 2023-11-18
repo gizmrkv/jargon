@@ -55,4 +55,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_mlp, conf, args.sweep_id, prefix="signet/")
+    wandb_sweep(train_mlp, conf, args.sweep_id, prefix="id/")
