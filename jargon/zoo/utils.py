@@ -1,13 +1,17 @@
-import datetime
+import json
+from pathlib import Path
 from typing import Any, Callable, Dict
+
+import toml
+import yaml
 
 import wandb
 from jargon.utils import WandbLogger
 
 
 def wandb_sweep(
-    config: Dict[str, Any],
     main: Callable[..., Any],
+    config: Dict[str, Any] | None = None,
     sweep_id: str | None = None,
     project: str = "jargon",
     prefix: str = "",
@@ -20,3 +24,19 @@ def wandb_sweep(
         main(logger=logger, **wandb.config)
 
     wandb.agent(sweep_id, func, project=project)
+
+
+def read_config(config_path: str | Path) -> Dict[str, Any]:
+    config_path = Path(config_path)
+    if config_path.suffix == ".json":
+        with open(config_path) as f:
+            config = json.load(f)
+    elif config_path.suffix in (".yaml", ".yml"):
+        with open(config_path) as f:
+            config = yaml.load(f, Loader=yaml.SafeLoader)
+    elif config_path.suffix == ".toml":
+        with open(config_path) as f:
+            config = toml.load(f)
+    else:
+        raise ValueError(f"Unknown config file type: {config_path.suffix}")
+    return config
