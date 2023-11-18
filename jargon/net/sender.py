@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple, Type
 
 import torch
 from torch import Tensor, nn
+from torch.distributions import Categorical
 
 from .rnn import RNN
 
@@ -89,20 +90,32 @@ class Sender(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.start = nn.Parameter(torch.randn(embedding_dim))
 
-    def forward(self, x: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward(
+        self, x: Tensor, message: Tensor | None = None
+    ) -> Tuple[Tensor, Tensor]:
         x = self.encoder(x)
         x = self.input_layer(x)
         hidden = x.repeat(self.num_layers, 1, 1)
         if isinstance(self.decoder, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
-        start = self.start.repeat(x.shape[0], 1)
-        sequence, logits, _ = self.decoder.generate_discrete_sequence(
-            length=self.length,
-            embedding=self.embedding,
-            start_embedding=start,
-            state=hidden,
-            output_layer=self.output_layer,
-        )
+        if message is None:
+            start = self.start.repeat(x.shape[0], 1)
+            sequence, logits, _ = self.decoder.generate_discrete_sequence(
+                length=self.length,
+                embedding=self.embedding,
+                start_embedding=start,
+                state=hidden,
+                output_layer=self.output_layer,
+            )
+        else:
+            message = self.embedding(message)
+            logits, _ = self.decoder(message, hidden)
+            logits = self.output_layer(logits)
+            if self.training:
+                distr = Categorical(logits=logits)
+                sequence = distr.sample()
+            else:
+                sequence = logits.argmax(-1)
 
         return sequence, logits
