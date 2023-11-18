@@ -101,6 +101,13 @@ def accuracy_metrics(batch: Batch) -> Dict[str, float]:
                 f"acc/part.{name_s}->{name_r}.std": acc_part.std().item(),
             }
 
+    metrics["acc/comp.mean"] = np.mean(
+        [v for k, v in metrics.items() if k.startswith("acc/comp")]
+    )
+    metrics["acc/part.mean"] = np.mean(
+        [v for k, v in metrics.items() if k.startswith("acc/part")]
+    )
+
     return metrics
 
 
