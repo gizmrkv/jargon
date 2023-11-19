@@ -39,6 +39,7 @@ class Receiver(nn.Module):
 
     Examples
     --------
+    >>> import torch
     >>> decoder = nn.Linear(32, 20)
     >>> receiver = Receiver(
     ...     decoder=decoder,
