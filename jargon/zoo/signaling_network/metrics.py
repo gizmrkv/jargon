@@ -102,10 +102,18 @@ def accuracy_metrics(batch: Batch) -> Dict[str, float]:
             }
 
     metrics["acc/comp.mean"] = np.mean(
-        [v for k, v in metrics.items() if k.startswith("acc/comp")]
+        [
+            v
+            for k, v in metrics.items()
+            if k.startswith("acc/comp") and k.endswith("mean")
+        ]
     )
     metrics["acc/part.mean"] = np.mean(
-        [v for k, v in metrics.items() if k.startswith("acc/part")]
+        [
+            v
+            for k, v in metrics.items()
+            if k.startswith("acc/part") and k.endswith("mean")
+        ]
     )
 
     return metrics
