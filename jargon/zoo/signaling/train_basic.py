@@ -16,8 +16,6 @@ def train_basic(
     max_len: int = 8,
     entropy_loss_weight: float = 0.0,
     length_loss_weight: float = 0.0,
-    reset_sender_per_epoch: int | None = None,
-    reset_receiver_per_epoch: int | None = None,
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
     encoder_activation_type: Type[nn.Module] | str = nn.GELU,
@@ -93,16 +91,6 @@ def train_basic(
     game = SignalingGame(sender, receiver)
     loss = Loss(num_elems, num_attrs, entropy_loss_weight, length_loss_weight)
 
-    def reset(epoch: int) -> None:
-        if reset_sender_per_epoch is not None and epoch % reset_sender_per_epoch == 0:
-            sender.apply(init_weights)
-
-        if (
-            reset_receiver_per_epoch is not None
-            and epoch % reset_receiver_per_epoch == 0
-        ):
-            receiver.apply(init_weights)
-
     train(
         num_elems=num_elems,
         num_attrs=num_attrs,
@@ -111,7 +99,6 @@ def train_basic(
         game=game,
         loss_fn=loss,
         additional_metrics_fn=loss.metrics,
-        epoch_begin_fn=reset,
         **train_args,
     )
 

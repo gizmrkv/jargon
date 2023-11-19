@@ -41,10 +41,6 @@ parameters:
     value: 0.0
   length_loss_weight:
     value: 0.0
-  # reset_sender_per_epoch:
-  #   value: 1000
-  # reset_receiver_per_epoch:
-  #   value: 1000
   encoder_embedding_dim:
     value: 8
   encoder_hidden_sizes:
