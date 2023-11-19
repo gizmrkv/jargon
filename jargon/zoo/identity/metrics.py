@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 
 from torch import Tensor
 from torch.distributions import Categorical

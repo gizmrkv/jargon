@@ -4,7 +4,6 @@ from torch import nn
 
 from jargon.game import SignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
-from jargon.utils import init_weights
 from jargon.zoo.signaling.loss import Loss
 from jargon.zoo.signaling.train import train
 

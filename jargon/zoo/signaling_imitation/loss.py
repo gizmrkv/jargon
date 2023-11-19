@@ -1,14 +1,10 @@
-import math
 from typing import Dict, Mapping, Set
 
 import torch
 from torch import Tensor
-from torch.distributions import Categorical
 from torch.nn import functional as F
 
 from jargon.core import Batch
-from jargon.game import SignalingNetworkGame
-from jargon.net.loss import pg_loss
 from jargon.zoo.signaling_network.loss import Loss
 
 

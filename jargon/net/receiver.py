@@ -1,6 +1,5 @@
-from typing import Any, Dict, Tuple, Type
+from typing import Any, Dict, Type
 
-import torch
 from torch import Tensor, nn
 from torch.distributions import Categorical
 

@@ -1,17 +1,5 @@
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Dict, Mapping, Set
 
-import torch
 from torch import Tensor, nn
 
 from ..core import Batch
