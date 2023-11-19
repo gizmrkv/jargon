@@ -5,6 +5,7 @@ from torch import nn
 
 from jargon.game import SignalingNetworkGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
+from jargon.zoo.signaling_imitation.loss import ImitationLoss
 from jargon.zoo.signaling_network.loss import Loss
 from jargon.zoo.signaling_network.train import train
 
@@ -96,16 +97,6 @@ def train_one_way(
     senders = {f"S{i}": deepcopy(sender) for i in range(num_agents)}
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_agents)}
 
-    # network = {s: {r for r in receivers} for s in senders}
-    # adaptation_targets = {s: {r for r in receivers} for s in senders}
-    # adaptation_targets |= {r: {s for s in senders} for r in receivers}
-    # if imitation:
-    #     imitation_targets = {s1: {s2 for s2 in senders if s1 != s2} for s1 in senders}
-    #     imitation_triggers = {s: {r for r in receivers} for s in senders}
-    # else:
-    #     imitation_targets = None
-    #     imitation_triggers = None
-
     network = {f"S{i}": {} for i in range(num_agents)}
     for i in range(num_agents - 1):
         network[f"S{i}"] = {f"R{i}", f"R{i+1}"}
@@ -145,6 +136,9 @@ def train_one_way(
         entropy_loss_weight=entropy_loss_weight,
         length_loss_weight=length_loss_weight,
         adaptation_targets=adaptation_targets,
+    )
+    loss = ImitationLoss(
+        loss=loss,
         imitation_targets=imitation_targets,
         imitation_triggers=imitation_triggers,
         imitation_threshold=imitation_threshold,

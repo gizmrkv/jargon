@@ -5,6 +5,7 @@ from torch import nn
 
 from jargon.game import SignalingNetworkGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
+from jargon.zoo.signaling_imitation.loss import ImitationLoss
 from jargon.zoo.signaling_network.loss import Loss
 from jargon.zoo.signaling_network.train import train
 
@@ -116,6 +117,9 @@ def train_complete(
         entropy_loss_weight=entropy_loss_weight,
         length_loss_weight=length_loss_weight,
         adaptation_targets=adaptation_targets,
+    )
+    loss = ImitationLoss(
+        loss=loss,
         imitation_targets=imitation_targets,
         imitation_triggers=imitation_triggers,
         imitation_threshold=imitation_threshold,
