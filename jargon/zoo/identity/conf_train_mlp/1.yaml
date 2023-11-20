@@ -20,7 +20,7 @@ parameters:
   test_proportion:
     value: 0.2
   max_epochs:
-    value: 500
+    value: 501
   batch_size:
     value: 4096
   lr:

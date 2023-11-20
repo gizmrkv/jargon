@@ -24,7 +24,7 @@ parameters:
   max_len:
     value: 8
   max_epochs:
-    value: 2000
+    value: 2001
   batch_size:
     value: 4096
   lr:
