@@ -16,7 +16,7 @@ from jargon.utils import (
     random_split,
 )
 
-from .metrics import Metrics
+from .metrics import LanguageMetrics, Metrics
 
 
 def train(
@@ -92,6 +92,7 @@ def train(
         game.receivers,
         log_dir / "test",
     )
+    lang_metrics_fn = LanguageMetrics(game.senders, log_dir)
 
     def test_fn(epoch: int) -> None:
         train_batch = game_comp(train_dataset, train_dataset)
@@ -105,6 +106,9 @@ def train(
                 train_batch, train_metrics, epoch
             )
             test_metrics |= metrics_test_fn.heavy_test(test_batch, test_metrics, epoch)
+
+            batch = game_comp(dataset, dataset)
+            lang_metrics_fn(batch, epoch)
 
         if additional_metrics_fn is not None:
             train_metrics |= additional_metrics_fn(train_batch)

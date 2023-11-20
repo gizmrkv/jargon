@@ -232,3 +232,31 @@ def dataframe_to_image(
     path = save_dir.joinpath(f"{epoch:0>8}.png")
     plt.savefig(path)
     plt.clf()
+
+
+class LanguageMetrics:
+    def __init__(self, senders: Sequence[str], log_dir: Path) -> None:
+        self.senders = list(senders)
+        self.log_dir = log_dir
+        self.langs_dir = {s: log_dir / "langs" / s for s in senders}
+
+        for d in self.langs_dir.values():
+            os.makedirs(d, exist_ok=True)
+
+    def __call__(self, batch: Batch, epoch: int) -> Dict[str, float]:
+        input: Tensor = batch.input
+        messages: Dict[str, Tensor] = batch.messages
+
+        inp_lines = [",".join([str(y) for y in x]) for x in input.tolist()]
+        langs = {}
+        for s, message in messages.items():
+            msg_list = message.tolist()
+            msg_list = [x[: x.index(0) if 0 in x else len(x)] for x in msg_list]
+            msg_list = ["-".join([str(y) for y in x]) for x in msg_list]
+            lines = [",".join([x, y]) for x, y in zip(inp_lines, msg_list)]
+            langs[s] = "\n".join(lines)
+
+        for s, lang in langs.items():
+            path = self.langs_dir[s] / f"{epoch:0>8}.csv"
+            with open(path, "a") as f:
+                f.write(lang + "\n")

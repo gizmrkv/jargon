@@ -16,7 +16,7 @@ from jargon.utils import (
     random_split,
 )
 
-from .metrics import Metrics
+from .metrics import LanguageMetrics, Metrics
 
 
 def train(
@@ -70,6 +70,7 @@ def train(
     optimizer = optim.Adam(game.parameters(), lr=lr)
 
     metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len)
+    lang_metrics_fn = LanguageMetrics(log_dir)
 
     def test_fn(epoch: int) -> None:
         train_batch = game(train_dataset, train_dataset)
@@ -81,6 +82,9 @@ def train(
         if (epoch // test_per_epoch) % heavy_test_per_test == 0:
             train_metrics |= metrics_fn.heavy_test(train_batch)
             test_metrics |= metrics_fn.heavy_test(test_batch)
+
+            batch = game(dataset, dataset)
+            lang_metrics_fn(batch, epoch)
 
         if additional_metrics_fn is not None:
             train_metrics |= additional_metrics_fn(train_batch)

@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
@@ -72,3 +74,24 @@ class Metrics:
         return {
             "topsim/mean": topsim,
         }
+
+
+class LanguageMetrics:
+    def __init__(self, log_dir: Path) -> None:
+        self.log_dir = log_dir / "langs"
+        os.makedirs(self.log_dir, exist_ok=True)
+
+    def __call__(self, batch: Batch, epoch: int) -> Dict[str, float]:
+        input: Tensor = batch.input
+        message: Tensor = batch.message
+
+        inp_lines = [",".join([str(y) for y in x]) for x in input.tolist()]
+        msg_list = message.tolist()
+        msg_list = [x[: x.index(0) if 0 in x else len(x)] for x in msg_list]
+        msg_list = ["-".join([str(y) for y in x]) for x in msg_list]
+        lines = [",".join([x, y]) for x, y in zip(inp_lines, msg_list)]
+        lang = "\n".join(lines)
+
+        path = self.log_dir / f"{epoch:0>8}.csv"
+        with open(path, "a") as f:
+            f.write(lang + "\n")
