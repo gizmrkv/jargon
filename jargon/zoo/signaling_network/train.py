@@ -28,6 +28,7 @@ def train(
     test_proportion: float = 0.2,
     vocab_size: int = 50,
     max_len: int = 8,
+    fix_len: bool = False,
     max_epochs: int = 5000,
     batch_size: int = 4096,
     lr: float = 1e-3,
@@ -74,6 +75,10 @@ def train(
         receivers=game.receivers,
         network={s: {r for r in game.receivers} for s in game.senders},
     )
+
+    eos = -1 if fix_len else 0
+    game.eos = eos
+    game_comp.eos = eos
     metrics_train_fn = Metrics(
         num_elems,
         num_attrs,
@@ -82,6 +87,7 @@ def train(
         game.senders,
         game.receivers,
         log_dir / "train",
+        eos,
     )
     metrics_test_fn = Metrics(
         num_elems,
@@ -91,8 +97,9 @@ def train(
         game.senders,
         game.receivers,
         log_dir / "test",
+        eos,
     )
-    lang_metrics_fn = LanguageMetrics(game.senders, log_dir)
+    lang_metrics_fn = LanguageMetrics(game.senders, log_dir, eos)
 
     def test_fn(epoch: int) -> None:
         train_batch = game_comp(train_dataset, train_dataset)

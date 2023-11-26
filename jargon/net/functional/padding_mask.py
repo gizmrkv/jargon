@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 
 
-def padding_mask(message: Tensor) -> Tensor:
+def padding_mask(message: Tensor, eos: int = 0) -> Tensor:
     """Create a mask for the padding in the message.
 
     Parameters
@@ -23,7 +23,7 @@ def padding_mask(message: Tensor) -> Tensor:
     tensor([[1, 1, 1, 1, 0],
             [1, 1, 1, 0, 0]])
     """
-    mask = message == 0
+    mask = message == eos
     indices = torch.argmax(mask.int(), dim=1)
     no_mask = ~mask.any(dim=1)
     indices[no_mask] = message.shape[1]

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any, Callable, Dict, Hashable, List, Sequence
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -13,6 +13,7 @@ from torch import Tensor
 from torch.distributions import Categorical
 
 from jargon.core import Batch
+from jargon.net.functional import drop_padding
 from jargon.utils.analysis import language_similarity, topographic_similarity
 from jargon.zoo.signaling_network.loss import Loss
 
@@ -29,6 +30,7 @@ class Metrics:
         senders: Sequence[str],
         receivers: Sequence[str],
         log_dir: Path,
+        eos: int = 0,
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
@@ -37,6 +39,8 @@ class Metrics:
         self.senders = list(senders)
         self.receivers = list(receivers)
         self.log_dir = log_dir
+        self.eos = eos
+        self.y_processor = lambda x: drop_padding(x, eos=self.eos)
 
         self.acc_df_dir = log_dir / "acc"
         self.langsim_df_dir = log_dir / "langsim"
@@ -62,7 +66,9 @@ class Metrics:
     def heavy_test(
         self, batch: Batch, metrics: Dict[str, Any], epoch: int
     ) -> Dict[str, Any]:
-        heavy_metrics = topsim_metrics(batch) | langsim_metrics(batch)
+        heavy_metrics = topsim_metrics(batch, self.y_processor) | langsim_metrics(
+            batch, self.y_processor
+        )
 
         acc_df = accuracy_dataframe(metrics, self.senders, self.receivers)
         langsim_df = langsim_dataframe(heavy_metrics, self.senders)
@@ -173,14 +179,16 @@ def loss_metrics(batch: Batch, loss: Loss) -> Dict[str, float]:
     return metrics
 
 
-def topsim_metrics(batch: Batch) -> Dict[str, float]:
+def topsim_metrics(
+    batch: Batch, y_processor: Callable[[NDArray[np.int32]], Sequence[Hashable]]
+) -> Dict[str, float]:
     input: Tensor = batch.input  # type: ignore
     metrics: Dict[str, float] = {}
     for name_s, message in batch.messages.items():  # type: ignore
         topsim = topographic_similarity(
             input.cpu().numpy(),
             message.cpu().numpy(),  # type: ignore
-            y_processor=drop_padding,  # type: ignore
+            y_processor=y_processor,  # type: ignore
         )
         metrics[f"topsim/{name_s}"] = topsim
 
@@ -188,14 +196,16 @@ def topsim_metrics(batch: Batch) -> Dict[str, float]:
     return metrics
 
 
-def langsim_metrics(batch: Batch) -> Dict[str, float]:
+def langsim_metrics(
+    batch: Batch, y_processor: Callable[[NDArray[np.int32]], Sequence[Hashable]]
+) -> Dict[str, float]:
     names_s = list(batch.messages)  # type: ignore
     metrics = {}
     for i in range(len(names_s)):
         for j in range(i + 1, len(names_s)):
             m1 = batch.messages[names_s[i]].cpu().numpy()  # type: ignore
             m2 = batch.messages[names_s[j]].cpu().numpy()  # type: ignore
-            ls = language_similarity(m1, m2, processor=drop_padding)
+            ls = language_similarity(m1, m2, processor=y_processor)
             metrics[f"langsim/{names_s[i]}-{names_s[j]}"] = ls
 
     metrics["langsim/mean"] = np.mean(list(metrics.values()))
@@ -216,11 +226,6 @@ def langsim_dataframe(
     return pd.DataFrame(data=matrix, columns=senders, index=senders)
 
 
-def drop_padding(x: NDArray[np.int32]) -> NDArray[np.int32]:
-    i = np.argwhere(x == 0)
-    return x if len(i) == 0 else x[: i[0, 0]]
-
-
 def dataframe_to_image(
     df: pd.DataFrame,
     epoch: int,
@@ -235,9 +240,10 @@ def dataframe_to_image(
 
 
 class LanguageMetrics:
-    def __init__(self, senders: Sequence[str], log_dir: Path) -> None:
+    def __init__(self, senders: Sequence[str], log_dir: Path, eos: int = 0) -> None:
         self.senders = list(senders)
         self.log_dir = log_dir
+        self.eos = eos
         self.langs_dir = {s: log_dir / "langs" / s for s in senders}
 
         for d in self.langs_dir.values():
@@ -251,7 +257,9 @@ class LanguageMetrics:
         langs = {}
         for s, message in messages.items():
             msg_list = message.tolist()
-            msg_list = [x[: x.index(0) if 0 in x else len(x)] for x in msg_list]
+            msg_list = [
+                x[: x.index(self.eos) if self.eos in x else len(x)] for x in msg_list
+            ]
             msg_list = ["-".join([str(y) for y in x]) for x in msg_list]
             lines = [",".join([x, y]) for x, y in zip(inp_lines, msg_list)]
             langs[s] = "\n".join(lines)

@@ -28,14 +28,15 @@ class SignalingGame(nn.Module):
         The agent that receives the message and produces an output.
     """
 
-    def __init__(self, sender: nn.Module, receiver: nn.Module) -> None:
+    def __init__(self, sender: nn.Module, receiver: nn.Module, eos: int = 0) -> None:
         super().__init__()
         self.sender = sender
         self.receiver = receiver
+        self.eos = eos
 
     def forward(self, input: Tensor, target: Tensor) -> Batch:
         message, msg_logits = self.sender(input)
-        msg_mask = padding_mask(message)
+        msg_mask = padding_mask(message, eos=self.eos)
         message = message * msg_mask
         msg_length = msg_mask.sum(dim=-1)
         output, logits = self.receiver(message)

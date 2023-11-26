@@ -12,11 +12,13 @@ class SignalingNetworkGame(nn.Module):
         senders: Mapping[str, nn.Module],
         receivers: Mapping[str, nn.Module],
         network: Mapping[str, Set[str]],
+        eos: int = 0,
     ) -> None:
         super().__init__()
         self.senders = nn.ModuleDict(senders)
         self.receivers = nn.ModuleDict(receivers)
         self.network = network
+        self.eos = eos
 
     def forward(self, input: Tensor, target: Tensor) -> Batch:
         messages = {}
@@ -25,7 +27,7 @@ class SignalingNetworkGame(nn.Module):
         messages_length = {}
         for sender_name, sender in self.senders.items():
             message, msg_logits = sender(input)
-            msg_mask = padding_mask(message)
+            msg_mask = padding_mask(message, eos=self.eos)
             message = message * msg_mask
             msg_length = msg_mask.sum(dim=-1)
             messages[sender_name] = message

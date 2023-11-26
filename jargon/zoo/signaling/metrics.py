@@ -2,12 +2,11 @@ import os
 from pathlib import Path
 from typing import Any, Dict
 
-import numpy as np
-from numpy.typing import NDArray
 from torch import Tensor
 from torch.distributions import Categorical
 
 from jargon.core import Batch
+from jargon.net.functional import drop_padding
 from jargon.utils.analysis import topographic_similarity
 
 
@@ -18,11 +17,14 @@ class Metrics:
         num_attrs: int,
         vocab_size: int,
         max_len: int,
+        eos: int = 0,
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
         self.vocab_size = vocab_size
         self.max_len = max_len
+        self.eos = eos
+        self.y_processor = lambda x: drop_padding(x, eos=self.eos)
 
     def __call__(self, batch: Batch) -> Dict[str, Any]:
         output: Tensor = batch.output  # type: ignore
@@ -61,14 +63,10 @@ class Metrics:
         input: Tensor = batch.input
         message: Tensor = batch.message
 
-        def drop_padding(x: NDArray[np.int32]) -> NDArray[np.int32]:
-            i = np.argwhere(x == 0)
-            return x if len(i) == 0 else x[: i[0, 0]]
-
         topsim = topographic_similarity(
             input.cpu().numpy(),
             message.cpu().numpy(),
-            y_processor=drop_padding,  # type: ignore
+            y_processor=self.y_processor,
         )
 
         return {
@@ -77,8 +75,9 @@ class Metrics:
 
 
 class LanguageMetrics:
-    def __init__(self, log_dir: Path) -> None:
+    def __init__(self, log_dir: Path, eos: int = 0) -> None:
         self.log_dir = log_dir / "langs"
+        self.eos = eos
         os.makedirs(self.log_dir, exist_ok=True)
 
     def __call__(self, batch: Batch, epoch: int) -> Dict[str, float]:
@@ -87,7 +86,9 @@ class LanguageMetrics:
 
         inp_lines = [",".join([str(y) for y in x]) for x in input.tolist()]
         msg_list = message.tolist()
-        msg_list = [x[: x.index(0) if 0 in x else len(x)] for x in msg_list]
+        msg_list = [
+            x[: x.index(self.eos) if self.eos in x else len(x)] for x in msg_list
+        ]
         msg_list = ["-".join([str(y) for y in x]) for x in msg_list]
         lines = [",".join([x, y]) for x, y in zip(inp_lines, msg_list)]
         lang = "\n".join(lines)

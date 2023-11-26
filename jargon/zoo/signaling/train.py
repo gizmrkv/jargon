@@ -28,6 +28,7 @@ def train(
     test_proportion: float = 0.2,
     vocab_size: int = 50,
     max_len: int = 8,
+    fix_len: bool = False,
     max_epochs: int = 5000,
     batch_size: int = 4096,
     lr: float = 1e-3,
@@ -68,9 +69,10 @@ def train(
     game = game.to(device)
     game.apply(init_weights)
     optimizer = optim.Adam(game.parameters(), lr=lr)
-
-    metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len)
-    lang_metrics_fn = LanguageMetrics(log_dir)
+    eos = -1 if fix_len else 0
+    game.eos = eos
+    metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len, eos)
+    lang_metrics_fn = LanguageMetrics(log_dir, eos)
 
     def test_fn(epoch: int) -> None:
         train_batch = game(train_dataset, train_dataset)
