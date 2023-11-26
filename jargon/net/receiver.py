@@ -70,6 +70,7 @@ class Receiver(nn.Module):
         num_layers: int = 1,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
+        instantly: bool = False,
     ) -> None:
         super().__init__()
         self.decoder = decoder
@@ -82,6 +83,7 @@ class Receiver(nn.Module):
         self.num_layers = num_layers
         self.cell_type = cell_type
         self.cell_args = cell_args
+        self.instantly = instantly
 
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.encoder = RNN(
@@ -95,13 +97,15 @@ class Receiver(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         emb = self.embedding(x)
-        _, hidden = self.encoder(emb)
-        if isinstance(hidden, tuple):
-            hidden, _ = hidden
-        hidden = hidden[-1]
-        logits = self.output_layer(hidden)
+
+        logits, _ = self.encoder(emb)
+        if not self.instantly:
+            logits = logits[:, -1:, :]
+
+        logits = self.output_layer(logits)
         logits = self.decoder(logits)
-        logits = logits.reshape(-1, self.num_attrs, self.num_elems)
+        logits = logits.reshape(-1, logits.shape[1], self.num_attrs, self.num_elems)
+
         if self.training:
             distr = Categorical(logits=logits)
             output = distr.sample()
