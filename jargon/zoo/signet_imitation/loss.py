@@ -5,7 +5,7 @@ from torch import Tensor
 from torch.nn import functional as F
 
 from jargon.core import Batch
-from jargon.zoo.signaling_network.loss import Loss
+from jargon.zoo.signet.loss import Loss
 
 
 class ImitationLoss:

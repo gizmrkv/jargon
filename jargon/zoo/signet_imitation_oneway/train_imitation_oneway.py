@@ -5,9 +5,8 @@ from torch import nn
 
 from jargon.game import SignalingNetworkGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
-from jargon.zoo.signaling_imitation.loss import ImitationLoss
-from jargon.zoo.signaling_network.loss import Loss
-from jargon.zoo.signaling_network.train_reset import train_reset
+from jargon.zoo.signet.loss import Loss
+from jargon.zoo.signet_imitation.train_imitation import train_imitation
 
 
 def train_complete(
@@ -16,11 +15,7 @@ def train_complete(
     vocab_size: int = 50,
     max_len: int = 8,
     num_senders: int = 2,
-    num_receivers: int = 2,
-    entropy_loss_weight: float = 0.0,
-    length_loss_weight: float = 0.0,
-    imitation: bool = False,
-    imitation_threshold: float = 0.99,
+    num_receivers: int = 1,
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
     encoder_activation_type: Type[nn.Module] | str = nn.GELU,
@@ -97,41 +92,27 @@ def train_complete(
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
 
+    assert num_receivers == 1, "Only implemented when there is one receiver."
+
     network = {s: {r for r in receivers} for s in senders}
     adaptation_targets = {s: {r for r in receivers} for s in senders}
     adaptation_targets |= {r: {s for s in senders} for r in receivers}
-    if imitation:
-        imitation_targets = {s1: {s2 for s2 in senders if s1 != s2} for s1 in senders}
-        imitation_triggers = {s: {r for r in receivers} for s in senders}
-    else:
-        imitation_targets = None
-        imitation_triggers = None
+
+    imitation_triggers = {s: {r for r in receivers} for s in senders}
+    imitation_targets = {}
+    for i in range(num_senders - 1):
+        imitation_targets[f"S{i}"] = {f"S{i+1}"}
 
     game = SignalingNetworkGame(senders, receivers, network)
-    loss = Loss(
-        num_elems=num_elems,
-        num_attrs=num_attrs,
-        vocab_size=vocab_size,
-        max_len=max_len,
+    train_imitation(
         game=game,
-        entropy_loss_weight=entropy_loss_weight,
-        length_loss_weight=length_loss_weight,
         adaptation_targets=adaptation_targets,
-    )
-    loss = ImitationLoss(
-        loss=loss,
         imitation_targets=imitation_targets,
         imitation_triggers=imitation_triggers,
-        imitation_threshold=imitation_threshold,
-    )
-    train_reset(
         num_elems=num_elems,
         num_attrs=num_attrs,
         vocab_size=vocab_size,
         max_len=max_len,
-        game=game,
-        loss_fn=loss,
-        additional_metrics_fn=loss.metrics,
         **train_args,
     )
 
@@ -147,4 +128,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_complete, conf, args.sweep_id, prefix="signet/")
+    wandb_sweep(train_complete, conf, args.sweep_id)

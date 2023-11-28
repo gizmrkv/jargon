@@ -5,9 +5,9 @@ from torch import nn
 
 from jargon.game import SignalingNetworkGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
-from jargon.zoo.signaling_imitation.loss import ImitationLoss
-from jargon.zoo.signaling_network.loss import Loss
-from jargon.zoo.signaling_network.train import train
+from jargon.zoo.signet.loss import Loss
+from jargon.zoo.signet.train import train
+from jargon.zoo.signet_imitation.loss import ImitationLoss
 
 
 def train_complete(
@@ -15,25 +15,39 @@ def train_complete(
     num_attrs: int = 2,
     vocab_size: int = 50,
     max_len: int = 8,
-    num_senders: int = 2,
+    num_good_senders: int = 1,
+    num_poor_senders: int = 1,
     num_receivers: int = 2,
     entropy_loss_weight: float = 0.0,
     length_loss_weight: float = 0.0,
     imitation: bool = False,
     imitation_threshold: float = 0.99,
-    encoder_embedding_dim: int = 8,
-    encoder_hidden_sizes: List[int] = [64],
-    encoder_activation_type: Type[nn.Module] | str = nn.GELU,
-    encoder_activation_args: Dict[str, Any] | None = None,
-    encoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
-    encoder_normalization_args: Dict[str, Any] | None = None,
-    encoder_dropout: float = 0.0,
-    sender_input_dim: int = 64,
-    sender_embedding_dim: int = 8,
-    sender_hidden_size: int = 128,
-    sender_num_layers: int = 2,
-    sender_cell_type: Type[nn.Module] | str = nn.GRU,
-    sender_cell_args: Dict[str, Any] | None = None,
+    good_encoder_embedding_dim: int = 8,
+    good_encoder_hidden_sizes: List[int] = [64],
+    good_encoder_activation_type: Type[nn.Module] | str = nn.GELU,
+    good_encoder_activation_args: Dict[str, Any] | None = None,
+    good_encoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
+    good_encoder_normalization_args: Dict[str, Any] | None = None,
+    good_encoder_dropout: float = 0.0,
+    good_sender_input_dim: int = 64,
+    good_sender_embedding_dim: int = 8,
+    good_sender_hidden_size: int = 128,
+    good_sender_num_layers: int = 2,
+    good_sender_cell_type: Type[nn.Module] | str = nn.GRU,
+    good_sender_cell_args: Dict[str, Any] | None = None,
+    poor_encoder_embedding_dim: int = 8,
+    poor_encoder_hidden_sizes: List[int] = [64],
+    poor_encoder_activation_type: Type[nn.Module] | str = nn.GELU,
+    poor_encoder_activation_args: Dict[str, Any] | None = None,
+    poor_encoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
+    poor_encoder_normalization_args: Dict[str, Any] | None = None,
+    poor_encoder_dropout: float = 0.0,
+    poor_sender_input_dim: int = 64,
+    poor_sender_embedding_dim: int = 8,
+    poor_sender_hidden_size: int = 128,
+    poor_sender_num_layers: int = 2,
+    poor_sender_cell_type: Type[nn.Module] | str = nn.GRU,
+    poor_sender_cell_args: Dict[str, Any] | None = None,
     decoder_hidden_sizes: List[int] = [64],
     decoder_activation_type: Type[nn.Module] | str = nn.GELU,
     decoder_activation_args: Dict[str, Any] | None = None,
@@ -46,30 +60,54 @@ def train_complete(
     receiver_num_layers: int = 2,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
+    receiver_instantly: bool = False,
     **train_args: Any,
 ) -> None:
-    encoder = MultiDiscreteMLP(
+    good_encoder = MultiDiscreteMLP(
         high=num_elems,
         n=num_attrs,
-        output_dim=sender_input_dim,
-        embedding_dim=encoder_embedding_dim,
-        hidden_sizes=encoder_hidden_sizes,
-        activation_type=encoder_activation_type,
-        activation_args=encoder_activation_args,
-        normalization_type=encoder_normalization_type,
-        normalization_args=encoder_normalization_args,
-        dropout=encoder_dropout,
+        output_dim=good_sender_input_dim,
+        embedding_dim=good_encoder_embedding_dim,
+        hidden_sizes=good_encoder_hidden_sizes,
+        activation_type=good_encoder_activation_type,
+        activation_args=good_encoder_activation_args,
+        normalization_type=good_encoder_normalization_type,
+        normalization_args=good_encoder_normalization_args,
+        dropout=good_encoder_dropout,
     )
-    sender = Sender(
-        encoder=encoder,
-        input_dim=sender_input_dim,
+    good_sender = Sender(
+        encoder=good_encoder,
+        input_dim=good_sender_input_dim,
         vocab_size=vocab_size,
         length=max_len,
-        embedding_dim=sender_embedding_dim,
-        hidden_size=sender_hidden_size,
-        num_layers=sender_num_layers,
-        cell_type=sender_cell_type,
-        cell_args=sender_cell_args,
+        embedding_dim=good_sender_embedding_dim,
+        hidden_size=good_sender_hidden_size,
+        num_layers=good_sender_num_layers,
+        cell_type=good_sender_cell_type,
+        cell_args=good_sender_cell_args,
+    )
+    poor_encoder = MultiDiscreteMLP(
+        high=num_elems,
+        n=num_attrs,
+        output_dim=poor_sender_input_dim,
+        embedding_dim=poor_encoder_embedding_dim,
+        hidden_sizes=poor_encoder_hidden_sizes,
+        activation_type=poor_encoder_activation_type,
+        activation_args=poor_encoder_activation_args,
+        normalization_type=poor_encoder_normalization_type,
+        normalization_args=poor_encoder_normalization_args,
+        dropout=poor_encoder_dropout,
+    )
+    poor_sender = Sender(
+        encoder=poor_encoder,
+        input_dim=poor_sender_input_dim,
+        vocab_size=vocab_size,
+        length=max_len,
+        embedding_dim=poor_sender_embedding_dim,
+        hidden_size=poor_sender_hidden_size,
+        num_layers=poor_sender_num_layers,
+        cell_type=poor_sender_cell_type,
+        cell_args=poor_sender_cell_args,
     )
     decoder = MLP(
         input_dim=receiver_output_dim,
@@ -92,9 +130,11 @@ def train_complete(
         num_layers=receiver_num_layers,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
+        instantly=receiver_instantly,
     )
-
-    senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
+    senders = {}
+    senders |= {f"gS{i}": deepcopy(good_sender) for i in range(num_good_senders)}
+    senders |= {f"pS{i}": deepcopy(poor_sender) for i in range(num_poor_senders)}
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
 
     network = {s: {r for r in receivers} for s in senders}

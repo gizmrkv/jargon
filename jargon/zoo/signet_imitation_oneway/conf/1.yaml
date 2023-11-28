@@ -1,0 +1,12 @@
+method: "grid"
+project: "jargon"
+name: "sample"
+
+metric:
+  name: "test/acc/part.mean"
+  goal: "maximize"
+
+parameters:
+  seed:
+    min: 0
+    max: 9
