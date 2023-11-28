@@ -30,8 +30,17 @@ class PGLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, log_prob: Tensor, reward: Tensor) -> Tensor:
-        reward = discounted_cumulative_reward(reward, self.gamma)
-        reward -= reward.mean()
+        assert (
+            log_prob.dim() == reward.dim()
+        ), "log_prob and reward must have the same number of dimensions."
+
+        if log_prob.dim() == 2:
+            reward = discounted_cumulative_reward(reward, self.gamma)
+
+        reward = reward.detach()
+        reward = reward - reward.mean().item()
+        reward = reward / (reward.std().item() + 1e-8)
+
         loss = -log_prob * reward
         return loss
 
