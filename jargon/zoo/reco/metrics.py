@@ -21,15 +21,10 @@ class Metrics:
         acc_comp = acc_flag.all(-1).float()
         acc_part = acc_flag.float()
 
-        distr = Categorical(logits=output)
-        entropy: Tensor = distr.entropy()
-
         metrics = {
             "acc/comp.mean": acc_comp.mean().item(),
             "acc/comp.std": acc_comp.std().item(),
             "acc/part.mean": acc_part.mean().item(),
             "acc/part.std": acc_part.std().item(),
-            "entropy.mean": entropy.mean().item(),
-            "entropy.std": entropy.std().item(),
         }
         return metrics

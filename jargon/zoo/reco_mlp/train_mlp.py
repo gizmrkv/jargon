@@ -4,8 +4,8 @@ from torch import nn
 
 from jargon.game import SupervisedGame
 from jargon.net import MultiDiscreteMLP
-from jargon.zoo.identity.loss import Loss
-from jargon.zoo.identity.train import train
+from jargon.zoo.reco.loss import Loss
+from jargon.zoo.reco.train import train
 
 
 def train_mlp(
@@ -13,7 +13,7 @@ def train_mlp(
     num_attrs: int = 2,
     embedding_dim: int = 8,
     hidden_sizes: List[int] = [64],
-    activation_type: Type[nn.Module] | str = nn.ReLU,
+    activation_type: Type[nn.Module] | str = "GELU",
     activation_args: Dict[str, Any] | None = None,
     normalization_type: Type[nn.Module] | str | None = None,
     normalization_args: Dict[str, Any] | None = None,
@@ -55,4 +55,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_mlp, conf, args.sweep_id, prefix="id/")
+    wandb_sweep(train_mlp, conf, args.sweep_id)
