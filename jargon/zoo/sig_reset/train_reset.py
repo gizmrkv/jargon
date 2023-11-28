@@ -2,7 +2,7 @@ from typing import Any
 
 from jargon.game import SignalingGame
 from jargon.utils import init_weights
-from jargon.zoo.signaling.train import train
+from jargon.zoo.sig.train import train
 
 
 def train_reset(

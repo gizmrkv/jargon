@@ -4,16 +4,16 @@ from torch import nn
 
 from jargon.game import SignalingGame
 from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
-from jargon.zoo.signaling.loss import Loss
-from jargon.zoo.signaling.train import train
+from jargon.zoo.sig.loss import Loss
+from jargon.zoo.sig.train import train
 
 
 def train_basic(
-    num_elems: int = 50,
+    num_elems: int = 100,
     num_attrs: int = 2,
-    vocab_size: int = 50,
-    max_len: int = 8,
-    entropy_loss_weight: float = 0.0,
+    vocab_size: int = 100,
+    max_len: int = 3,
+    entropy_loss_weight: float = 0.5,
     length_loss_weight: float = 0.0,
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
@@ -24,8 +24,8 @@ def train_basic(
     encoder_dropout: float = 0.0,
     sender_input_dim: int = 64,
     sender_embedding_dim: int = 8,
-    sender_hidden_size: int = 256,
-    sender_num_layers: int = 2,
+    sender_hidden_size: int = 500,
+    sender_num_layers: int = 1,
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
     decoder_hidden_sizes: List[int] = [64],
@@ -36,8 +36,8 @@ def train_basic(
     decoder_dropout: float = 0.0,
     receiver_output_dim: int = 64,
     receiver_embedding_dim: int = 8,
-    receiver_hidden_size: int = 256,
-    receiver_num_layers: int = 2,
+    receiver_hidden_size: int = 500,
+    receiver_num_layers: int = 1,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
     **train_args: Any,
@@ -113,4 +113,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_basic, conf, args.sweep_id, prefix="sig/")
+    wandb_sweep(train_basic, conf, args.sweep_id)

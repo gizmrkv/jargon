@@ -25,6 +25,8 @@ class Loss:
         logits: Tensor = batch.output_logits  # type: ignore
         target: Tensor = batch.target  # type: ignore
 
+        assert logits.dim() == 3, "Please set instantly=False."
+
         logits = logits.reshape(-1, self.num_elems)
         target = target.reshape(-1)
         loss_r = F.cross_entropy(logits, target, reduction="none")
@@ -39,15 +41,9 @@ class Loss:
         distr = Categorical(logits=msg_logits)
         log_prob = distr.log_prob(message)
         log_prob = log_prob * msg_mask
-
         log_prob = log_prob.sum(-1)
-
         reward = -receiver_loss.detach()
-        reward = reward - reward.mean()
-        reward_std = reward.std()
-        reward = reward / (reward_std + 1e-8)
-
-        loss_s = -log_prob * reward
+        loss_s = pg_loss(log_prob, reward)
         return loss_s
 
     def entropy_loss(self, batch: Batch) -> Tensor:
@@ -71,7 +67,7 @@ class Loss:
         log_prob = log_prob.sum(-1)
 
         length = msg_length.float() / message.shape[-1]
-        loss_len = pg_loss(log_prob.unsqueeze(1), -length.unsqueeze(1)).squeeze(1)
+        loss_len = pg_loss(log_prob, -length)
         return loss_len
 
     def __call__(self, batch: Batch) -> Tensor:
