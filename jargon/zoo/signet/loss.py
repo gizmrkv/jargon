@@ -42,6 +42,8 @@ class Loss:
         losses: Dict[str, Dict[str, Tensor]] = {k: {} for k in self.game.senders}
         for name_s, output_logits_r in outputs_logits.items():
             for name_r, logits in output_logits_r.items():  # type: ignore
+                assert logits.dim() == 3, "Please set instantly=False."
+
                 logits = logits.reshape(-1, self.num_elems)  # type: ignore
                 loss_r = F.cross_entropy(logits, target, reduction="none")
                 loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
@@ -53,33 +55,34 @@ class Loss:
     ) -> Dict[str, Tensor]:
         losses: Dict[str, Tensor] = {}
         for name_s in self.game.senders:
-            targets_r = self.adaptation_targets[name_s]
-
-            losses_r = torch.stack(
-                [receiver_communication_losses[name_s][r] for r in targets_r], dim=-1
-            )
-            reward = -losses_r.detach().mean(dim=-1)
-            reward = reward - reward.mean(dim=0)
-            reward = reward.unsqueeze(1)
-
+            message: Tensor = batch.messages[name_s]  # type: ignore
             msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
-            distr = Categorical(logits=msg_logits)
-            log_prob = distr.log_prob(batch.messages[name_s])
-            log_prob = log_prob * batch.messages_mask[name_s]
+            msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
 
-            log_prob = log_prob.sum(-1).unsqueeze(1)
-            loss_s = pg_loss(log_prob, reward).squeeze(1)
-            losses[name_s] = loss_s
+            distr = Categorical(logits=msg_logits)
+            log_prob = distr.log_prob(message)
+            log_prob = log_prob * msg_mask
+            log_prob = log_prob.sum(-1)
+
+            targets_r = self.adaptation_targets[name_s]
+            targets_r.intersection_update(set(receiver_communication_losses[name_s]))
+
+            loss_r = torch.stack(
+                [receiver_communication_losses[name_s][r] for r in targets_r], dim=-1
+            ).mean(dim=-1)
+            reward = -loss_r.detach()
+            losses[name_s] = pg_loss(log_prob, reward)
 
         return losses
 
     def sender_entropy_loss(self, batch: Batch) -> Dict[str, Tensor]:
         losses: Dict[str, Tensor] = {}
         for name_s in self.game.senders:
-            msg_logits: Tensor = batch.messages_logits[name_s]
+            msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
+            msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
             distr = Categorical(logits=msg_logits)
-            entropy = distr.entropy() * batch.messages_mask[name_s]
-            entropy = entropy.sum(dim=-1)
+            entropy = distr.entropy() * msg_mask
+            entropy = entropy.mean(dim=-1)
             losses[name_s] = -entropy
 
         return losses
@@ -87,14 +90,18 @@ class Loss:
     def sender_length_loss(self, batch: Batch) -> Dict[str, Tensor]:
         losses: Dict[str, Tensor] = {}
         for name_s in self.game.senders:
-            msg_length = batch.messages_length[name_s].float() / self.max_len
+            message: Tensor = batch.messages[name_s]  # type: ignore
+            msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
+            msg_length: Tensor = batch.messages_length[name_s]
+            msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
 
-            distr = Categorical(logits=batch.messages_logits[name_s])
-            log_prob = distr.log_prob(batch.messages[name_s])
-            log_prob = log_prob * batch.messages_mask[name_s]
-            log_prob = log_prob.sum(-1).unsqueeze(1)
+            distr = Categorical(logits=msg_logits)
+            log_prob = distr.log_prob(message)
+            log_prob = log_prob * msg_mask
+            log_prob = log_prob.sum(-1)
 
-            loss_len = pg_loss(log_prob, -msg_length.unsqueeze(1)).squeeze(1)
+            length = msg_length.float() / message.shape[-1]
+            loss_len = pg_loss(log_prob, -length)
             losses[name_s] = loss_len
 
         return losses
@@ -107,11 +114,7 @@ class Loss:
     ) -> Dict[str, Tensor]:
         losses = {}
         for name_s in self.game.senders:
-            loss_s = torch.stack(
-                [sender_communication_losses[name_s]],
-                dim=-1,
-            )
-            loss_s = loss_s.sum(dim=-1)
+            loss_s = sender_communication_losses[name_s]
 
             if sender_entropy_losses is not None:
                 loss_s += self.entropy_loss_weight * sender_entropy_losses[name_s]
@@ -142,15 +145,15 @@ class Loss:
             batch, receiver_communication_losses
         )
 
-        if not math.isclose(self.entropy_loss_weight, 0.0):
-            sender_entropy_losses = self.sender_entropy_loss(batch)
-        else:
+        if math.isclose(self.entropy_loss_weight, 0.0):
             sender_entropy_losses = None
-
-        if not math.isclose(self.length_loss_weight, 0.0):
-            sender_length_losses = self.sender_length_loss(batch)
         else:
+            sender_entropy_losses = self.sender_entropy_loss(batch)
+
+        if math.isclose(self.length_loss_weight, 0.0):
             sender_length_losses = None
+        else:
+            sender_length_losses = self.sender_length_loss(batch)
 
         sender_losses = self.sender_loss(
             sender_communication_losses,

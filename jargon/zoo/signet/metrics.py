@@ -1,4 +1,6 @@
+import itertools
 import os
+import re
 from pathlib import Path
 from typing import Any, Callable, Dict, Hashable, List, Sequence
 
@@ -15,7 +17,7 @@ from torch.distributions import Categorical
 from jargon.core import Batch
 from jargon.net.functional import drop_padding
 from jargon.utils.analysis import language_similarity, topographic_similarity
-from jargon.zoo.signaling_network.loss import Loss
+from jargon.zoo.signet.loss import Loss
 
 matplotlib.use("Agg")
 
@@ -107,20 +109,10 @@ def accuracy_metrics(batch: Batch) -> Dict[str, float]:
                 f"acc/part.{name_s}->{name_r}.std": acc_part.std().item(),
             }
 
-    metrics["acc/comp.mean"] = np.mean(
-        [
-            v
-            for k, v in metrics.items()
-            if k.startswith("acc/comp") and k.endswith("mean")
-        ]
-    )
-    metrics["acc/part.mean"] = np.mean(
-        [
-            v
-            for k, v in metrics.items()
-            if k.startswith("acc/part") and k.endswith("mean")
-        ]
-    )
+    for name in ["comp", "part"]:
+        metrics[f"acc/{name}.mean.mean"] = np.mean(
+            [v for k, v in metrics.items() if re.match(rf"acc/{name}.*mean", k)]
+        )
 
     return metrics
 
@@ -159,22 +151,13 @@ def message_metrics(batch: Batch, vocab_size: int, max_len: int) -> Dict[str, fl
             f"msg/unique.{name_s}": unique,
         }
 
-    return metrics
-
-
-def loss_metrics(batch: Batch, loss: Loss) -> Dict[str, float]:
-    loss_com = loss.receiver_communication_losses(batch)
-    loss_imi = loss.sender_imitation_losses(batch)
-
-    loss_sen = loss.sender_losses(batch, loss_com, loss_imi)
-    loss_rec = loss.receiver_losses(batch, loss_com, loss_imi)
-
-    metrics: Dict[str, float] = {}
-    for name, l in (loss_sen | loss_rec).items():
-        metrics |= {
-            f"loss/{name}.mean": l.mean().item(),
-            f"loss/{name}.std": l.std().item(),
-        }
+    for name in ["entropy", "length"]:
+        metrics[f"msg/{name}.mean.mean"] = np.mean(
+            [v for k, v in metrics.items() if re.match(rf"msg/{name}.*mean", k)]
+        )
+    metrics["msg/unique.mean"] = np.mean(
+        [v for k, v in metrics.items() if re.match(rf"msg/unique.*", k)]
+    )
 
     return metrics
 
@@ -192,7 +175,8 @@ def topsim_metrics(
         )
         metrics[f"topsim/{name_s}"] = topsim
 
-    metrics["topsim/mean"] = np.mean(list(metrics.values()))
+    metrics["topsim.mean"] = np.mean(list(metrics.values()))
+    metrics["topsim.std"] = np.std(list(metrics.values()))
     return metrics
 
 
@@ -208,7 +192,8 @@ def langsim_metrics(
             ls = language_similarity(m1, m2, processor=y_processor)
             metrics[f"langsim/{names_s[i]}-{names_s[j]}"] = ls
 
-    metrics["langsim/mean"] = np.mean(list(metrics.values()))
+    metrics["langsim.mean"] = np.mean(list(metrics.values()))
+    metrics["langsim.std"] = np.std(list(metrics.values()))
     return metrics
 
 

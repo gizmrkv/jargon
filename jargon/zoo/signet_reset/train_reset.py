@@ -3,7 +3,7 @@ from typing import Any
 
 from jargon.game import SignalingNetworkGame
 from jargon.utils import init_weights
-from jargon.zoo.signaling_network.train import train
+from jargon.zoo.signet.train import train
 
 
 def train_reset(
