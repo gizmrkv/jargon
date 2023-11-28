@@ -175,8 +175,8 @@ def topsim_metrics(
         )
         metrics[f"topsim/{name_s}"] = topsim
 
-    metrics["topsim.mean"] = np.mean(list(metrics.values()))
-    metrics["topsim.std"] = np.std(list(metrics.values()))
+    metrics["topsim/mean"] = np.mean(list(metrics.values()))
+    metrics["topsim/std"] = np.std(list(metrics.values()))
     return metrics
 
 
@@ -192,8 +192,8 @@ def langsim_metrics(
             ls = language_similarity(m1, m2, processor=y_processor)
             metrics[f"langsim/{names_s[i]}-{names_s[j]}"] = ls
 
-    metrics["langsim.mean"] = np.mean(list(metrics.values()))
-    metrics["langsim.std"] = np.std(list(metrics.values()))
+    metrics["langsim/mean"] = np.mean(list(metrics.values()))
+    metrics["langsim/std"] = np.std(list(metrics.values()))
     return metrics
 
 
