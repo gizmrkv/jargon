@@ -100,11 +100,14 @@ class Receiver(nn.Module):
 
         logits, _ = self.encoder(emb)
         if not self.instantly:
-            logits = logits[:, -1:, :]
+            logits = logits[:, -1, :]
 
         logits = self.output_layer(logits)
         logits = self.decoder(logits)
-        logits = logits.reshape(-1, logits.shape[1], self.num_attrs, self.num_elems)
+        if self.instantly:
+            logits = logits.reshape(-1, x.shape[1], self.num_attrs, self.num_elems)
+        else:
+            logits = logits.reshape(-1, self.num_attrs, self.num_elems)
 
         if self.training:
             distr = Categorical(logits=logits)

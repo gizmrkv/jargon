@@ -96,7 +96,7 @@ class Sender(nn.Module):
         x = self.encoder(x)
         x = self.input_layer(x)
         hidden = x.repeat(self.num_layers, 1, 1)
-        if isinstance(self.decoder, nn.LSTM):
+        if isinstance(self.decoder.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
         if message is None:
