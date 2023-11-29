@@ -9,12 +9,12 @@ from jargon.zoo.signet.loss import Loss
 from jargon.zoo.signet_imitation.train_imitation import train_imitation
 
 
-def train_complete(
+def train_imitation_oneway(
     num_elems: int = 50,
     num_attrs: int = 2,
     vocab_size: int = 50,
     max_len: int = 8,
-    num_senders: int = 2,
+    num_senders: int = 6,
     num_receivers: int = 1,
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
@@ -128,4 +128,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_complete, conf, args.sweep_id)
+    wandb_sweep(train_imitation_oneway, conf, args.sweep_id)
