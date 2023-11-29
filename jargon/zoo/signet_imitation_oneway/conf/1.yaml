@@ -3,7 +3,7 @@ project: "jargon"
 name: "sample"
 
 metric:
-  name: "test/acc/part.mean"
+  name: "test/acc/part.mean.mean"
   goal: "maximize"
 
 parameters:
