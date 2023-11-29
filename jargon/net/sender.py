@@ -99,8 +99,8 @@ class Sender(nn.Module):
         if isinstance(self.decoder.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
+        start = self.start.repeat(x.shape[0], 1)
         if message is None:
-            start = self.start.repeat(x.shape[0], 1)
             sequence, logits, _ = self.decoder.generate_discrete_sequence(
                 length=self.length,
                 embedding=self.embedding,
@@ -109,8 +109,9 @@ class Sender(nn.Module):
                 output_layer=self.output_layer,
             )
         else:
-            message = self.embedding(message)
-            logits, _ = self.decoder(message, hidden)
+            emb = self.embedding(message[:, :-1])
+            emb = torch.cat([start.unsqueeze(1), emb], dim=1)
+            logits, _ = self.decoder(emb, hidden)
             logits = self.output_layer(logits)
             if self.training:
                 distr = Categorical(logits=logits)

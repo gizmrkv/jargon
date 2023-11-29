@@ -22,12 +22,12 @@ class ImitationLoss:
         self.imitation_threshold = imitation_threshold
 
     def sender_imitation_losses(self, batch: Batch) -> Dict[str, Dict[str, Tensor]]:
+        input: Tensor = batch.input  # type: ignore
         losses: Dict[str, Dict[str, Tensor]] = {k: {} for k in self.loss.game.senders}
         for name_s, targets_s in self.imitation_targets.items():
             target: Tensor = batch.target  # type: ignore
-            logits: Tensor = batch.messages_logits[name_s]  # type: ignore
-            logits = logits.reshape(-1, self.loss.vocab_size)
             for target_s in targets_s:
+                self.loss.game.senders[name_s]
                 trigger_list = []
                 for trigger_r in self.imitation_triggers[name_s]:
                     output: Tensor = batch.outputs[target_s][trigger_r]  # type: ignore
@@ -37,8 +37,12 @@ class ImitationLoss:
                 trigger = torch.cat(trigger_list, dim=-1).float().mean(dim=-1)
                 trigger = (trigger >= self.imitation_threshold).float()
 
-                message: Tensor = batch.messages[target_s].reshape(-1)  # type: ignore
-                loss = F.cross_entropy(logits, message, reduction="none")
+                tgt_message: Tensor = batch.messages[target_s]  # type: ignore
+                _, logits = self.loss.game.senders[name_s](input, message=tgt_message)
+                tgt_message = tgt_message.reshape(-1)
+                logits = logits.reshape(-1, self.loss.vocab_size)
+
+                loss = F.cross_entropy(logits, tgt_message, reduction="none")
                 loss = loss.reshape(-1, self.loss.max_len).mean(-1)
                 loss = loss * trigger
                 losses[name_s][target_s] = loss
