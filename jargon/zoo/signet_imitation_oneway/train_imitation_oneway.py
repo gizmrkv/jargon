@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Tuple, Type
 
 from torch import nn
 
@@ -14,8 +14,9 @@ def train_imitation_oneway(
     num_attrs: int = 2,
     vocab_size: int = 50,
     max_len: int = 8,
-    num_senders: int = 6,
+    num_senders: int = 3,
     num_receivers: int = 1,
+    additional_imitation_edges: str = "",
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
     encoder_activation_type: Type[nn.Module] | str = nn.GELU,
@@ -92,16 +93,20 @@ def train_imitation_oneway(
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
 
-    assert num_receivers == 1, "Only implemented when there is one receiver."
-
     network = {s: {r for r in receivers} for s in senders}
     adaptation_targets = {s: {r for r in receivers} for s in senders}
     adaptation_targets |= {r: {s for s in senders} for r in receivers}
 
     imitation_triggers = {s: {r for r in receivers} for s in senders}
-    imitation_targets = {}
+    imitation_targets = {s: set() for s in senders}
     for i in range(num_senders - 1):
         imitation_targets[f"S{i}"] = {f"S{i+1}"}
+
+    if additional_imitation_edges:
+        additional_imitation_edges = additional_imitation_edges.split(",")
+        additional_imitation_edges = [e.split("->") for e in additional_imitation_edges]
+        for s1, s2 in additional_imitation_edges:
+            imitation_targets[s1].add(s2)
 
     game = SignalingNetworkGame(senders, receivers, network)
     train_imitation(
