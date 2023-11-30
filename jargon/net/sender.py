@@ -88,7 +88,7 @@ class Sender(nn.Module):
         )
         self.output_layer = nn.Linear(hidden_size, vocab_size)
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.start = nn.Parameter(torch.randn(embedding_dim))
+        self.sos_embedding = nn.Parameter(torch.randn(embedding_dim))
 
     def forward(
         self, x: Tensor, message: Tensor | None = None
@@ -99,18 +99,28 @@ class Sender(nn.Module):
         if isinstance(self.decoder.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
-        start = self.start.repeat(x.shape[0], 1)
+        emb = self.sos_embedding.repeat(x.shape[0], 1).unsqueeze(1)
         if message is None:
-            sequence, logits, _ = self.decoder.generate_discrete_sequence(
-                length=self.length,
-                embedding=self.embedding,
-                start_embedding=start,
-                state=hidden,
-                output_layer=self.output_layer,
-            )
+            symbol_list = []
+            logits_list = []
+            for _ in range(self.length):
+                logits_step, hidden = self.decoder(emb, hidden)
+                logits_step = self.output_layer(logits_step)
+
+                if self.training:
+                    distr = Categorical(logits=logits_step)
+                    symbol = distr.sample()
+                else:
+                    symbol = logits_step.argmax(dim=-1)
+
+                emb = self.embedding(symbol)
+                symbol_list.append(symbol)
+                logits_list.append(logits_step)
+
+            sequence = torch.cat(symbol_list, dim=1)
+            logits = torch.cat(logits_list, dim=1)
         else:
-            emb = self.embedding(message[:, :-1])
-            emb = torch.cat([start.unsqueeze(1), emb], dim=1)
+            emb = torch.cat([emb, self.embedding(message[:, :-1])], dim=1)
             logits, _ = self.decoder(emb, hidden)
             logits = self.output_layer(logits)
             if self.training:
