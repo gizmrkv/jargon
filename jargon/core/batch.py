@@ -35,7 +35,7 @@ class Batch:
         return Batch(**{k: deepcopy(v, memo) for k, v in self.__dict__.items()})
 
     def __getattr__(self, key: str) -> Union[Tensor, "Batch"]:
-        assert key in self.__dict__, f"{key} is not in {self.__dict__}"
+        assert key in self.__dict__, f"{key} is not in {self.__dict__.keys()}"
         assert isinstance(
             self.__dict__[key], (Tensor, Batch)
         ), f"{key} is not a tensor or batch"
@@ -62,7 +62,7 @@ class Batch:
         self.__dict__.update(state)
 
     def __getitem__(self, key: str) -> Union[Tensor, "Batch"]:
-        assert key in self.__dict__, f"{key} is not in {self.__dict__}"
+        assert key in self.__dict__, f"{key} is not in {self.__dict__.keys()}"
         assert isinstance(
             self.__dict__[key], (Tensor, Batch)
         ), f"{key} is not a tensor or batch"
