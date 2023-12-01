@@ -1,0 +1,37 @@
+method: "grid"
+project: "jargon"
+name: "sample"
+
+metric:
+  name: "test/acc/part.mean"
+  goal: "maximize"
+
+parameters:
+  seed:
+    min: 0
+    max: 4
+  instantly:
+    values: [1, 0]
+
+  max_epochs:
+    value: 10001
+  num_elems:
+    value: 50
+  num_attrs:
+    value: 2
+  vocab_size:
+    value: 50
+  max_len:
+    value: 10
+  entropy_loss_weight:
+    value: 0.1
+  length_loss_weight:
+    value: 0.05
+  sender_hidden_size:
+    value: 256
+  sender_num_layers:
+    value: 2
+  receiver_hidden_size:
+    value: 256
+  receiver_num_layers:
+    value: 2

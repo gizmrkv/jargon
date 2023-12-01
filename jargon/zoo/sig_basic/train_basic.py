@@ -15,6 +15,8 @@ def train_basic(
     max_len: int = 3,
     entropy_loss_weight: float = 0.5,
     length_loss_weight: float = 0.0,
+    discount_factor: float = 0.1,
+    instantly: bool = False,
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
     encoder_activation_type: Type[nn.Module] | str = nn.GELU,
@@ -86,15 +88,26 @@ def train_basic(
         num_layers=receiver_num_layers,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
+        instantly=instantly,
     )
     game = SignalingGame(sender, receiver)
-    loss = Loss(num_elems, num_attrs, entropy_loss_weight, length_loss_weight)
+    loss = Loss(
+        num_elems,
+        num_attrs,
+        vocab_size,
+        max_len,
+        entropy_loss_weight,
+        length_loss_weight,
+        instantly,
+        discount_factor,
+    )
 
     train(
         num_elems=num_elems,
         num_attrs=num_attrs,
         vocab_size=vocab_size,
         max_len=max_len,
+        instantly=instantly,
         game=game,
         loss_fn=loss,
         additional_metrics_fn=loss.metrics,
