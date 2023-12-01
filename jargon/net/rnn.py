@@ -35,6 +35,7 @@ class RNN(nn.Module):
         input_dim: int,
         hidden_size: int,
         num_layers: int = 1,
+        bidirectional: bool = False,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
     ) -> None:
@@ -42,6 +43,7 @@ class RNN(nn.Module):
         self.input_dim = input_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.bidirectional = bidirectional
 
         if isinstance(cell_type, str):
             cell_type = getattr(nn, cell_type)
@@ -50,7 +52,12 @@ class RNN(nn.Module):
         self.cell_args = cell_args or {}
 
         self.cells = cell_type(  # type: ignore
-            input_dim, hidden_size, num_layers, batch_first=True, **self.cell_args
+            input_dim,
+            hidden_size,
+            num_layers,
+            bidirectional=bidirectional,
+            batch_first=True,
+            **self.cell_args
         )
 
     def forward(self, x: Tensor, state: Any = None) -> Tuple[Tensor, Any]:

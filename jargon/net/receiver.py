@@ -68,6 +68,7 @@ class Receiver(nn.Module):
         embedding_dim: int,
         hidden_size: int,
         num_layers: int = 1,
+        bidirectional: bool = False,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
         instantly: bool = False,
@@ -81,6 +82,7 @@ class Receiver(nn.Module):
         self.embedding_dim = embedding_dim
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.bidirectional = bidirectional
         self.cell_type = cell_type
         self.cell_args = cell_args
         self.instantly = instantly
@@ -90,10 +92,11 @@ class Receiver(nn.Module):
             input_dim=embedding_dim,
             hidden_size=hidden_size,
             num_layers=num_layers,
+            bidirectional=bidirectional,
             cell_type=cell_type,
             cell_args=cell_args,
         )
-        self.output_layer = nn.Linear(hidden_size, output_dim)
+        self.output_layer = nn.Linear(hidden_size * (1 + bidirectional), output_dim)
 
     def forward(self, x: Tensor) -> Tensor:
         emb = self.embedding(x)
