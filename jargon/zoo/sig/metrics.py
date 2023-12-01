@@ -70,7 +70,7 @@ class Metrics:
         )
 
         return {
-            "topsim": topsim,
+            "topsim/topsim": topsim,
         }
 
 
