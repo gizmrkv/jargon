@@ -1,0 +1,25 @@
+method: "grid"
+project: "jargon"
+name: "signet_imitation_oneway_2"
+
+metric:
+  name: "test/acc/part.mean.mean"
+  goal: "maximize"
+
+parameters:
+  seed:
+    value: 42
+    # min: 0
+    # max: 3
+  additional_imitation_edges:
+    values: ["S5->S0", ""]
+
+  max_epochs:
+    value: 20001
+  num_senders:
+    value: 6
+  num_receivers:
+    value: 1
+  entropy_loss_weight:
+    # value: 0.1
+    value: 0.0

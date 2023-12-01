@@ -1,6 +1,6 @@
 method: "grid"
 project: "jargon"
-name: "sample"
+name: "sig_basic_1"
 
 metric:
   name: "test/acc/part.mean"

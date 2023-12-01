@@ -1,17 +1,16 @@
 method: "grid"
 project: "jargon"
-name: "sig_basic_2"
+name: "signet_imitation_oneway_3"
 
 metric:
-  name: "test/acc/part.mean"
+  name: "test/acc/part.mean.mean"
   goal: "maximize"
 
 parameters:
   seed:
-    min: 0
-    max: 4
+    value: 42
   instantly:
-    values: [1, 0]
+    values: [true, false]
 
   max_epochs:
     value: 10001

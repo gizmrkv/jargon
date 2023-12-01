@@ -1,6 +1,6 @@
 method: "grid"
 project: "jargon"
-name: "sample"
+name: "signet_partition_1"
 
 metric:
   name: "test/acc/part.mean.mean"
