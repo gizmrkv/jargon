@@ -33,6 +33,7 @@ class Metrics:
         receivers: Sequence[str],
         log_dir: Path,
         eos: int = 0,
+        instantly: bool = False,
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
@@ -42,6 +43,7 @@ class Metrics:
         self.receivers = list(receivers)
         self.log_dir = log_dir
         self.eos = eos
+        self.instantly = instantly
         self.y_processor = lambda x: drop_padding(x, eos=self.eos)
 
         self.acc_df_dir = log_dir / "acc"
@@ -61,7 +63,7 @@ class Metrics:
         }
 
     def __call__(self, batch: Batch) -> Dict[str, float]:
-        return accuracy_metrics(batch) | message_metrics(
+        return accuracy_metrics(batch, self.instantly) | message_metrics(
             batch, self.vocab_size, self.max_len
         )
 
@@ -95,10 +97,13 @@ class Metrics:
         return movie_paths
 
 
-def accuracy_metrics(batch: Batch) -> Dict[str, float]:
+def accuracy_metrics(batch: Batch, instantly: bool) -> Dict[str, float]:
     metrics: Dict[str, float] = {}
     for name_s, outputs in batch.outputs.items():  # type: ignore
         for name_r, output in outputs.items():  # type: ignore
+            if instantly:
+                output = output[:, -1, :]
+
             acc_flag = output == batch.target  # type: ignore
             acc_comp = acc_flag.all(-1).float()
             acc_part = acc_flag.float()

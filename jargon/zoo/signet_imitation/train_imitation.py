@@ -17,6 +17,8 @@ def train_imitation(
     max_len: int = 8,
     entropy_loss_weight: float = 0.0,
     length_loss_weight: float = 0.0,
+    discount_factor: float = 0.1,
+    instantly: bool = False,
     imitation: bool = True,
     imitation_threshold: float = 0.9999,
     **train_args: Any,
@@ -30,6 +32,8 @@ def train_imitation(
         entropy_loss_weight=entropy_loss_weight,
         length_loss_weight=length_loss_weight,
         adaptation_targets=adaptation_targets,
+        discount_factor=discount_factor,
+        instantly=instantly,
     )
     if imitation:
         loss = ImitationLoss(

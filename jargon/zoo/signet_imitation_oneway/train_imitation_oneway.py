@@ -16,6 +16,8 @@ def train_imitation_oneway(
     max_len: int = 8,
     num_senders: int = 3,
     num_receivers: int = 1,
+    discount_factor: float = 0.1,
+    instantly: bool = False,
     additional_imitation_edges: str = "",
     encoder_embedding_dim: int = 8,
     encoder_hidden_sizes: List[int] = [64],
@@ -88,6 +90,7 @@ def train_imitation_oneway(
         num_layers=receiver_num_layers,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
+        instantly=instantly,
     )
 
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
@@ -118,6 +121,8 @@ def train_imitation_oneway(
         num_attrs=num_attrs,
         vocab_size=vocab_size,
         max_len=max_len,
+        discount_factor=discount_factor,
+        instantly=instantly,
         **train_args,
     )
 
