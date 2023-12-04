@@ -87,7 +87,7 @@ class Sender(nn.Module):
             cell_args=cell_args,
         )
         self.output_layer = nn.Linear(hidden_size, vocab_size)
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.msg_embedding = nn.Embedding(vocab_size, embedding_dim)
         self.sos_embedding = nn.Parameter(torch.randn(embedding_dim))
 
     def forward(
@@ -113,14 +113,14 @@ class Sender(nn.Module):
                 else:
                     symbol = logits_step.argmax(dim=-1)
 
-                emb = self.embedding(symbol)
+                emb = self.msg_embedding(symbol)
                 symbol_list.append(symbol)
                 logits_list.append(logits_step)
 
             sequence = torch.cat(symbol_list, dim=1)
             logits = torch.cat(logits_list, dim=1)
         else:
-            emb = torch.cat([emb, self.embedding(message[:, :-1])], dim=1)
+            emb = torch.cat([emb, self.msg_embedding(message[:, :-1])], dim=1)
             logits, _ = self.decoder(emb, hidden)
             logits = self.output_layer(logits)
             if self.training:

@@ -1,14 +1,14 @@
+from .discrete_receiver import DiscreteReceiver
+from .discrete_sender import DiscreteSender
 from .loss import PGLoss
 from .mlp import MLP, MultiDiscreteMLP
-from .receiver import Receiver
 from .rnn import RNN
-from .sender import Sender
 
 __all__ = [
+    "DiscreteReceiver",
+    "DiscreteSender",
     "PGLoss",
     "MLP",
     "MultiDiscreteMLP",
     "RNN",
-    "Sender",
-    "Receiver",
 ]

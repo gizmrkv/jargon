@@ -1,10 +1,10 @@
 from copy import deepcopy
-from typing import Any, Dict, List, Literal, Type
+from typing import Any, Dict, Literal, Type
 
 from torch import nn
 
 from jargon.game import SignalingNetworkGame
-from jargon.net import MLP, MultiDiscreteMLP, Receiver, Sender
+from jargon.net import DiscreteReceiver, DiscreteSender
 from jargon.zoo.signet.loss import Loss
 from jargon.zoo.signet.train import train
 
@@ -20,75 +20,42 @@ def train_partition(
     network_mode: Literal["fully"] = "fully",
     discount_factor: float = 0.1,
     instantly: bool = False,
-    encoder_embedding_dim: int = 8,
-    encoder_hidden_sizes: List[int] = [64],
-    encoder_activation_type: Type[nn.Module] | str = nn.GELU,
-    encoder_activation_args: Dict[str, Any] | None = None,
-    encoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
-    encoder_normalization_args: Dict[str, Any] | None = None,
-    encoder_dropout: float = 0.0,
-    sender_input_dim: int = 64,
-    sender_embedding_dim: int = 8,
+    sender_input_embedding_dim: int = 16,
+    sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 500,
     sender_num_layers: int = 1,
+    sender_bidirectional: bool = False,
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
-    decoder_hidden_sizes: List[int] = [64],
-    decoder_activation_type: Type[nn.Module] | str = nn.GELU,
-    decoder_activation_args: Dict[str, Any] | None = None,
-    decoder_normalization_type: Type[nn.Module] | str | None = nn.LayerNorm,
-    decoder_normalization_args: Dict[str, Any] | None = None,
-    decoder_dropout: float = 0.0,
-    receiver_output_dim: int = 64,
-    receiver_embedding_dim: int = 8,
+    receiver_embedding_dim: int = 16,
     receiver_hidden_size: int = 500,
     receiver_num_layers: int = 1,
+    receiver_bidirectional: bool = False,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
     **train_args: Any,
 ) -> None:
-    encoder = MultiDiscreteMLP(
-        high=num_elems,
-        n=num_attrs,
-        output_dim=sender_input_dim,
-        embedding_dim=encoder_embedding_dim,
-        hidden_sizes=encoder_hidden_sizes,
-        activation_type=encoder_activation_type,
-        activation_args=encoder_activation_args,
-        normalization_type=encoder_normalization_type,
-        normalization_args=encoder_normalization_args,
-        dropout=encoder_dropout,
-    )
-    sender = Sender(
-        encoder=encoder,
-        input_dim=sender_input_dim,
+    sender = DiscreteSender(
+        num_elems=num_elems,
+        num_attrs=num_attrs,
         vocab_size=vocab_size,
-        length=max_len,
-        embedding_dim=sender_embedding_dim,
+        max_len=max_len,
+        input_embedding_dim=sender_input_embedding_dim,
+        output_embedding_dim=sender_output_embedding_dim,
         hidden_size=sender_hidden_size,
         num_layers=sender_num_layers,
+        bidirectional=sender_bidirectional,
         cell_type=sender_cell_type,
         cell_args=sender_cell_args,
     )
-    decoder = MLP(
-        input_dim=receiver_output_dim,
-        output_dim=num_elems * num_attrs,
-        hidden_sizes=decoder_hidden_sizes,
-        activation_type=decoder_activation_type,
-        activation_args=decoder_activation_args,
-        normalization_type=decoder_normalization_type,
-        normalization_args=decoder_normalization_args,
-        dropout=decoder_dropout,
-    )
-    receiver = Receiver(
-        decoder=decoder,
-        vocab_size=vocab_size,
-        output_dim=receiver_output_dim,
+    receiver = DiscreteReceiver(
         num_elems=num_elems,
         num_attrs=num_attrs,
+        vocab_size=vocab_size,
         embedding_dim=receiver_embedding_dim,
         hidden_size=receiver_hidden_size,
         num_layers=receiver_num_layers,
+        bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
         instantly=instantly,
