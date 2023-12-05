@@ -69,7 +69,7 @@ class Loss:
             distr = Categorical(logits=msg_logits)
             log_prob = distr.log_prob(message)
             log_prob = log_prob * msg_mask
-            if self.instantly:
+            if not self.instantly:
                 log_prob = log_prob.sum(-1)
 
             targets_r = self.adaptation_targets[name_s]
@@ -122,7 +122,10 @@ class Loss:
     ) -> Dict[str, Tensor]:
         losses = {}
         for name_s in self.game.senders:
-            loss_s = sender_communication_losses[name_s].sum(-1)
+            loss_s = sender_communication_losses[name_s]
+
+            if self.instantly:
+                loss_s = loss_s.sum(-1)
 
             if sender_entropy_losses is not None:
                 loss_s += self.entropy_loss_weight * sender_entropy_losses[name_s]
@@ -141,9 +144,13 @@ class Loss:
         for name_r in self.game.receivers:
             losses_r = []
             for target_s in self.adaptation_targets[name_r]:
-                losses_r.append(receiver_communication_losses[target_s][name_r]).sum(-1)
+                losses_r.append(receiver_communication_losses[target_s][name_r])
 
             loss_r = torch.stack(losses_r, dim=-1).sum(dim=-1)
+
+            if self.instantly:
+                loss_r = loss_r.sum(-1)
+
             losses[name_r] = loss_r
         return losses
 
