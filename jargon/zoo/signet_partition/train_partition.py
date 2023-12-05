@@ -21,7 +21,6 @@ def train_partition(
     network_mode: Literal["fully"] = "fully",
     discount_factor: float = 0.1,
     instantly: bool = False,
-    reset: bool = False,
     sender_input_embedding_dim: int = 16,
     sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 500,
@@ -88,7 +87,7 @@ def train_partition(
         instantly=instantly,
     )
 
-    if reset:
+    if "reset_senders" in train_args or "reset_receivers" in train_args:
         train_reset(
             num_elems=num_elems,
             num_attrs=num_attrs,
