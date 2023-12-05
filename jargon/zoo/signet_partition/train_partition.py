@@ -7,6 +7,7 @@ from jargon.game import SignalingNetworkGame
 from jargon.net import DiscreteReceiver, DiscreteSender
 from jargon.zoo.signet.loss import Loss
 from jargon.zoo.signet.train import train
+from jargon.zoo.signet_reset.train_reset import train_reset
 
 
 def train_partition(
@@ -20,6 +21,7 @@ def train_partition(
     network_mode: Literal["fully"] = "fully",
     discount_factor: float = 0.1,
     instantly: bool = False,
+    reset: bool = False,
     sender_input_embedding_dim: int = 16,
     sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 500,
@@ -86,17 +88,30 @@ def train_partition(
         instantly=instantly,
     )
 
-    train(
-        num_elems=num_elems,
-        num_attrs=num_attrs,
-        vocab_size=vocab_size,
-        max_len=max_len,
-        instantly=instantly,
-        game=game,
-        loss_fn=loss,
-        additional_metrics_fn=loss.metrics,
-        **train_args,
-    )
+    if reset:
+        train_reset(
+            num_elems=num_elems,
+            num_attrs=num_attrs,
+            vocab_size=vocab_size,
+            max_len=max_len,
+            instantly=instantly,
+            game=game,
+            loss_fn=loss,
+            additional_metrics_fn=loss.metrics,
+            **train_args,
+        )
+    else:
+        train(
+            num_elems=num_elems,
+            num_attrs=num_attrs,
+            vocab_size=vocab_size,
+            max_len=max_len,
+            instantly=instantly,
+            game=game,
+            loss_fn=loss,
+            additional_metrics_fn=loss.metrics,
+            **train_args,
+        )
 
 
 if __name__ == "__main__":

@@ -16,14 +16,16 @@ def train_reset(
     receiver_life_epoch_max: int | None = None,
     **train_args: Any,
 ) -> None:
-    age_s = {
-        k: random.randint(sender_life_epoch_min, sender_life_epoch_max)
-        for k in game.senders.keys()
-    }
-    age_r = {
-        k: random.randint(receiver_life_epoch_min, receiver_life_epoch_max)
-        for k in game.receivers.keys()
-    }
+    if reset_senders:
+        age_s = {
+            k: random.randint(sender_life_epoch_min, sender_life_epoch_max)
+            for k in game.senders.keys()
+        }
+    if reset_receivers:
+        age_r = {
+            k: random.randint(receiver_life_epoch_min, receiver_life_epoch_max)
+            for k in game.receivers.keys()
+        }
 
     def reset(epoch: int) -> None:
         if reset_senders:
