@@ -81,26 +81,26 @@ def train(
     game.eos = eos
     game_comp.eos = eos
     metrics_train_fn = Metrics(
-        num_elems,
-        num_attrs,
-        vocab_size,
-        max_len,
-        game.senders,
-        game.receivers,
-        log_dir / "train",
-        eos,
-        instantly,
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        vocab_size=vocab_size,
+        max_len=max_len,
+        senders=game.senders,
+        receivers=game.receivers,
+        log_dir=log_dir / "train",
+        eos=eos,
+        instantly=instantly,
     )
     metrics_test_fn = Metrics(
-        num_elems,
-        num_attrs,
-        vocab_size,
-        max_len,
-        game.senders,
-        game.receivers,
-        log_dir / "test",
-        eos,
-        instantly,
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        vocab_size=vocab_size,
+        max_len=max_len,
+        senders=game.senders,
+        receivers=game.receivers,
+        log_dir=log_dir / "test",
+        eos=eos,
+        instantly=instantly,
     )
     lang_metrics_fn = LanguageMetrics(game.senders, log_dir, eos)
 
