@@ -45,9 +45,7 @@ class DiscreteSender(nn.Module):
             cell_type=cell_type,
             cell_args=cell_args,
         )
-        self.input_linear = nn.Linear(
-            input_embedding_dim * num_attrs, hidden_size * (1 + bidirectional)
-        )
+        self.input_linear = nn.Linear(input_embedding_dim * num_attrs, hidden_size)
         self.output_linear = nn.Linear(hidden_size * (1 + bidirectional), vocab_size)
         self.sos_embedding = nn.Parameter(torch.randn(output_embedding_dim))
 
