@@ -2,7 +2,6 @@ from typing import Any, Dict, Set
 
 from jargon.game import SignalingNetworkGame
 from jargon.zoo.signet.loss import Loss
-from jargon.zoo.signet.train import train
 from jargon.zoo.signet_imitation.loss import ImitationLoss
 from jargon.zoo.signet_reset.train_reset import train_reset
 
@@ -44,17 +43,14 @@ def train_imitation(
             imitation_threshold=imitation_threshold,
         )
 
-    if "reset_senders" in train_args or "reset_receivers" in train_args:
-        train_reset(
-            game=game,
-            loss_fn=loss,
-            additional_metrics_fn=loss.metrics,
-            **train_args,
-        )
-    else:
-        train(
-            game=game,
-            loss_fn=loss,
-            additional_metrics_fn=loss.metrics,
-            **train_args,
-        )
+    train_reset(
+        game=game,
+        loss_fn=loss,
+        num_elems=num_elems,
+        num_attrs=num_attrs,
+        vocab_size=vocab_size,
+        max_len=max_len,
+        instantly=instantly,
+        additional_metrics_fn=loss.metrics,
+        **train_args,
+    )
