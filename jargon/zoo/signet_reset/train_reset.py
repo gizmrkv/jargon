@@ -8,45 +8,30 @@ from jargon.zoo.signet.train import train
 
 def train_reset(
     game: SignalingNetworkGame,
-    reset_senders: bool = False,
-    sender_life_epoch_min: int | None = None,
-    sender_life_epoch_max: int | None = None,
-    reset_receivers: bool = False,
-    receiver_life_epoch_min: int | None = None,
-    receiver_life_epoch_max: int | None = None,
+    reset_senders_interval: int | None = None,
+    reset_receivers_interval: int | None = None,
     **train_args: Any,
 ) -> None:
-    if reset_senders:
-        age_s = {
-            k: random.randint(sender_life_epoch_min, sender_life_epoch_max)
-            for k in game.senders.keys()
-        }
-    if reset_receivers:
-        age_r = {
-            k: random.randint(receiver_life_epoch_min, receiver_life_epoch_max)
-            for k in game.receivers.keys()
-        }
+    assert (
+        reset_senders_interval is None or reset_senders_interval > 0
+    ), "reset_senders_interval must be None or > 0"
+    assert (
+        reset_receivers_interval is None or reset_receivers_interval > 0
+    ), "reset_receivers_interval must be None or > 0"
+
+    senders = list(game.senders.values())
+    receivers = list(game.receivers.values())
 
     def reset(epoch: int) -> None:
-        if reset_senders:
-            for name, model in game.senders.items():
-                if age_s[name] == 0:
-                    model.apply(init_weights)
-                    age_s[name] = random.randint(
-                        sender_life_epoch_min, sender_life_epoch_max
-                    )
-                else:
-                    age_s[name] -= 1
+        if reset_senders_interval is not None:
+            if epoch % reset_senders_interval == 0:
+                index = (epoch // reset_senders_interval) % len(senders)
+                senders[index].apply(init_weights)
 
-        if reset_receivers:
-            for name, model in game.receivers.items():
-                if age_r[name] == 0:
-                    model.apply(init_weights)
-                    age_r[name] = random.randint(
-                        receiver_life_epoch_min, receiver_life_epoch_max
-                    )
-                else:
-                    age_r[name] -= 1
+        if reset_receivers_interval is not None:
+            if epoch % reset_receivers_interval == 0:
+                index = (epoch // reset_receivers_interval) % len(receivers)
+                receivers[index].apply(init_weights)
 
     train(
         game=game,
