@@ -24,13 +24,15 @@ class ImitationLoss:
     def sender_imitation_losses(self, batch: Batch) -> Dict[str, Dict[str, Tensor]]:
         input: Tensor = batch.input  # type: ignore
         losses: Dict[str, Dict[str, Tensor]] = {k: {} for k in self.loss.game.senders}
+        target: Tensor = batch.target  # type: ignore
         for name_s, targets_s in self.imitation_targets.items():
-            target: Tensor = batch.target  # type: ignore
             for target_s in targets_s:
                 self.loss.game.senders[name_s]
                 trigger_list = []
                 for trigger_r in self.imitation_triggers[name_s]:
                     output: Tensor = batch.outputs[target_s][trigger_r]  # type: ignore
+                    if self.loss.instantly:
+                        output = output[:, -1, :]
                     mask = output == target
                     trigger_list.append(mask)
 
