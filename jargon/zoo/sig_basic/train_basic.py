@@ -24,12 +24,19 @@ def train_basic(
     sender_bidirectional: bool = False,
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
+    sender_peeky: bool = False,
+    sender_attention: bool = False,
+    sender_attention_dropout: float = 0.0,
+    sender_attention_weight: bool = False,
     receiver_embedding_dim: int = 16,
     receiver_hidden_size: int = 500,
     receiver_num_layers: int = 1,
     receiver_bidirectional: bool = False,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
+    receiver_attention: bool = False,
+    receiver_attention_dropout: float = 0.0,
+    receiver_attention_weight: bool = False,
     **train_args: Any,
 ) -> None:
     sender = DiscreteSender(
@@ -44,6 +51,10 @@ def train_basic(
         bidirectional=sender_bidirectional,
         cell_type=sender_cell_type,
         cell_args=sender_cell_args,
+        peeky=sender_peeky,
+        attention=sender_attention,
+        attention_dropout=sender_attention_dropout,
+        attention_weight=sender_attention_weight,
     )
     receiver = DiscreteReceiver(
         num_elems=num_elems,
@@ -56,6 +67,9 @@ def train_basic(
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
         instantly=instantly,
+        attention=receiver_attention,
+        attention_dropout=receiver_attention_dropout,
+        attention_weight=receiver_attention_weight,
     )
     game = SignalingGame(sender, receiver)
     loss = Loss(

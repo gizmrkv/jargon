@@ -4,6 +4,7 @@ import torch
 from torch import Tensor, nn
 from torch.distributions import Categorical
 
+from .attention import ScaledDotProductAttention
 from .rnn import RNN
 
 
@@ -21,6 +22,10 @@ class DiscreteSender(nn.Module):
         bidirectional: bool = False,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
+        peeky: bool = False,
+        attention: bool = False,
+        attention_dropout: float = 0.0,
+        attention_weight: bool = False,
     ) -> None:
         super().__init__()
         self.num_elems = num_elems
@@ -34,6 +39,10 @@ class DiscreteSender(nn.Module):
         self.bidirectional = bidirectional
         self.cell_type = cell_type
         self.cell_args = cell_args
+        self.peeky = peeky
+        self.attention = attention
+        self.attention_dropout = attention_dropout
+        self.attention_weight = attention_weight
 
         self.input_embedding = nn.Embedding(num_elems, input_embedding_dim)
         self.output_embedding = nn.Embedding(vocab_size, output_embedding_dim)
@@ -49,13 +58,26 @@ class DiscreteSender(nn.Module):
         self.output_linear = nn.Linear(hidden_size * (1 + bidirectional), vocab_size)
         self.sos_embedding = nn.Parameter(torch.randn(output_embedding_dim))
 
+        if attention:
+            self.embed_to_hidden = nn.Linear(input_embedding_dim, hidden_size)
+            self.attention_layer = ScaledDotProductAttention(
+                embed_dim=hidden_size,
+                dropout=attention_dropout,
+                weight=attention_weight,
+            )
+
     def forward(
         self, x: Tensor, message: Tensor | None = None
     ) -> Tuple[Tensor, Tensor]:
         x = self.input_embedding(x)
+
+        if self.attention:
+            value = self.embed_to_hidden(x)
+
         x = x.reshape(x.shape[0], -1)
         x = self.input_linear(x)
         hidden = x.repeat(self.num_layers * (1 + self.bidirectional), 1, 1)
+        hidden0 = hidden
         if isinstance(self.rnn.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
@@ -76,6 +98,24 @@ class DiscreteSender(nn.Module):
                 emb = self.output_embedding(symbol)
                 symbol_list.append(symbol)
                 logits_list.append(logits_step)
+
+                if self.peeky:
+                    if isinstance(self.rnn.cells, nn.LSTM):
+                        hidden[0] = hidden[0] + hidden0
+                    else:
+                        hidden = hidden + hidden0
+
+                if self.attention:
+                    if isinstance(self.rnn.cells, nn.LSTM):
+                        attn, _ = self.attention_layer(
+                            hidden[0].transpose(0, 1), value, value
+                        )
+                        hidden[0] = hidden[0] + attn.transpose(0, 1)
+                    else:
+                        attn, _ = self.attention_layer(
+                            hidden.transpose(0, 1), value, value
+                        )
+                        hidden = hidden + attn.transpose(0, 1)
 
             sequence = torch.cat(symbol_list, dim=1)
             logits = torch.cat(logits_list, dim=1)
