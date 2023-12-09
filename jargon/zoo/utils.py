@@ -16,6 +16,7 @@ def wandb_sweep(main: Callable[..., Any]) -> None:
     parser.add_argument("--sweep_id", "-s", type=str, default=None)
     parser.add_argument("--project", "-p", type=str, default="jargon")
     parser.add_argument("--prefix", "-x", type=str, default="")
+    parser.add_argument("--device", "-d", type=str, default=None)
     args = parser.parse_args()
 
     config = read_config(args.conf_path) if args.conf_path else None
@@ -26,7 +27,7 @@ def wandb_sweep(main: Callable[..., Any]) -> None:
 
     def func() -> None:
         logger = WandbLogger(prefix=args.prefix)
-        main(logger=logger, **wandb.config)
+        main(device=args.device, logger=logger, **wandb.config)
 
     wandb.agent(sweep_id, func, project=args.project)
 
