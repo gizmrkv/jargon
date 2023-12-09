@@ -74,7 +74,8 @@ class Metrics:
             f"topsim/{dist}": topographic_similarity(
                 input, message, y_processor=self.y_processor
             )
-            for dist in ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
+            for dist in ["Levenshtein"]
+            # for dist in ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
         }
 
         return topsims

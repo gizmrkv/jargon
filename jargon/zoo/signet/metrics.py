@@ -173,7 +173,8 @@ def topsim_metrics(
     input: Tensor = batch.input  # type: ignore
     input = input.cpu().numpy()
 
-    dists = ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
+    # dists = ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
+    dists = ["Levenshtein"]
     metrics: Dict[str, float] = {}
     for name_s, message in batch.messages.items():  # type: ignore
         message = message.cpu().numpy()
