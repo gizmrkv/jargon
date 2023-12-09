@@ -171,17 +171,27 @@ def topsim_metrics(
     batch: Batch, y_processor: Callable[[NDArray[np.int32]], Sequence[Hashable]]
 ) -> Dict[str, float]:
     input: Tensor = batch.input  # type: ignore
+    input = input.cpu().numpy()
+
+    dists = ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
     metrics: Dict[str, float] = {}
     for name_s, message in batch.messages.items():  # type: ignore
-        topsim = topographic_similarity(
-            input.cpu().numpy(),
-            message.cpu().numpy(),  # type: ignore
-            y_processor=y_processor,  # type: ignore
-        )
-        metrics[f"topsim/{name_s}"] = topsim
+        message = message.cpu().numpy()
+        metrics |= {
+            f"topsim/{name_s}.{dist}": topographic_similarity(
+                input, message, y_processor=y_processor, y_dist=dist
+            )
+            for dist in dists
+        }
 
-    metrics["topsim/mean"] = np.mean(list(metrics.values()))
-    metrics["topsim/std"] = np.std(list(metrics.values()))
+    for dist in dists:
+        metrics[f"topsim/{dist}.mean"] = np.mean(
+            [v for k, v in metrics.items() if re.match(rf"topsim/.*{dist}", k)]
+        )
+        metrics[f"topsim/{dist}.std"] = np.std(
+            [v for k, v in metrics.items() if re.match(rf"topsim/.*{dist}", k)]
+        )
+
     return metrics
 
 

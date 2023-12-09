@@ -68,15 +68,16 @@ class Metrics:
         input: Tensor = batch.input
         message: Tensor = batch.message
 
-        topsim = topographic_similarity(
-            input.cpu().numpy(),
-            message.cpu().numpy(),
-            y_processor=self.y_processor,
-        )
-
-        return {
-            "topsim/topsim": topsim,
+        input = input.cpu().numpy()
+        message = message.cpu().numpy()
+        topsims = {
+            f"topsim/{dist}": topographic_similarity(
+                input, message, y_processor=self.y_processor
+            )
+            for dist in ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
         }
+
+        return topsims
 
 
 class LanguageMetrics:

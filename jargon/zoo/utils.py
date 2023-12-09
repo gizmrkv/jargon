@@ -19,6 +19,7 @@ def wandb_sweep(main: Callable[..., Any]) -> None:
     args = parser.parse_args()
 
     config = read_config(args.conf_path) if args.conf_path else None
+    sweep_id = args.sweep_id
 
     if sweep_id is None:
         sweep_id = wandb.sweep(sweep=config, project=args.project)
