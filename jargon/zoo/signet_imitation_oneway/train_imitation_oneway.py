@@ -94,14 +94,6 @@ def train_imitation_oneway(
 
 
 if __name__ == "__main__":
-    import argparse
+    from jargon.zoo.utils import wandb_sweep
 
-    from jargon.zoo.utils import read_config, wandb_sweep
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--conf_path", "-c", type=str, default=None)
-    parser.add_argument("--sweep_id", "-s", type=str, default=None)
-    args = parser.parse_args()
-
-    conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_imitation_oneway, conf, args.sweep_id)
+    wandb_sweep(train_imitation_oneway)

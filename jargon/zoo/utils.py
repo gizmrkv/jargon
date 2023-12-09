@@ -1,3 +1,4 @@
+import argparse
 import json
 from pathlib import Path
 from typing import Any, Callable, Dict
@@ -9,21 +10,24 @@ import wandb
 from jargon.utils import WandbLogger
 
 
-def wandb_sweep(
-    main: Callable[..., Any],
-    config: Dict[str, Any] | None = None,
-    sweep_id: str | None = None,
-    project: str = "jargon",
-    prefix: str = "",
-) -> None:
+def wandb_sweep(main: Callable[..., Any]) -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--conf_path", "-c", type=str, default=None)
+    parser.add_argument("--sweep_id", "-s", type=str, default=None)
+    parser.add_argument("--project", "-p", type=str, default="jargon")
+    parser.add_argument("--prefix", "-x", type=str, default="")
+    args = parser.parse_args()
+
+    config = read_config(args.conf_path) if args.conf_path else None
+
     if sweep_id is None:
-        sweep_id = wandb.sweep(sweep=config, project=project)
+        sweep_id = wandb.sweep(sweep=config, project=args.project)
 
     def func() -> None:
-        logger = WandbLogger(prefix=prefix)
+        logger = WandbLogger(prefix=args.prefix)
         main(logger=logger, **wandb.config)
 
-    wandb.agent(sweep_id, func, project=project)
+    wandb.agent(sweep_id, func, project=args.project)
 
 
 def read_config(config_path: str | Path) -> Dict[str, Any]:

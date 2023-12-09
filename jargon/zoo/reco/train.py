@@ -37,11 +37,13 @@ def train(
     additional_metrics_fn: Callable[[Batch], Dict[str, Any]] = lambda _: {},
     epoch_begin_fn: Callable[[int], None] | None = None,
     epoch_end_fn: Callable[[int], None] | None = None,
+    device: torch.device | str | None = None,
 ) -> Dict[str, Any]:
     if seed is not None:
         fix_seed(seed)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     log_dir = make_log_dir()
 

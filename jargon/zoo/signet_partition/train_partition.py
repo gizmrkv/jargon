@@ -28,9 +28,6 @@ def train_partition(
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
     sender_peeky: bool = False,
-    sender_attention: bool = False,
-    sender_attention_dropout: float = 0.0,
-    sender_attention_weight: bool = False,
     receiver_embedding_dim: int = 16,
     receiver_hidden_size: int = 500,
     receiver_num_layers: int = 1,
@@ -52,9 +49,6 @@ def train_partition(
         cell_type=sender_cell_type,
         cell_args=sender_cell_args,
         peeky=sender_peeky,
-        attention=sender_attention,
-        attention_dropout=sender_attention_dropout,
-        attention_weight=sender_attention_weight,
     )
     receiver = DiscreteReceiver(
         num_elems=num_elems,
@@ -108,14 +102,6 @@ def train_partition(
 
 
 if __name__ == "__main__":
-    import argparse
+    from jargon.zoo.utils import wandb_sweep
 
-    from jargon.zoo.utils import read_config, wandb_sweep
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--conf_path", "-c", type=str, default=None)
-    parser.add_argument("--sweep_id", "-s", type=str, default=None)
-    args = parser.parse_args()
-
-    conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_partition, conf, args.sweep_id)
+    wandb_sweep(train_partition)

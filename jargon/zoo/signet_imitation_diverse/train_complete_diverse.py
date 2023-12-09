@@ -10,7 +10,7 @@ from jargon.zoo.signet.train import train
 from jargon.zoo.signet_imitation.loss import ImitationLoss
 
 
-def train_complete(
+def train_complete_diverse(
     num_elems: int = 50,
     num_attrs: int = 2,
     vocab_size: int = 50,
@@ -132,14 +132,6 @@ def train_complete(
 
 
 if __name__ == "__main__":
-    import argparse
+    from jargon.zoo.utils import wandb_sweep
 
-    from jargon.zoo.utils import read_config, wandb_sweep
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--conf_path", "-c", type=str, default=None)
-    parser.add_argument("--sweep_id", "-s", type=str, default=None)
-    args = parser.parse_args()
-
-    conf = read_config(args.conf_path) if args.conf_path else None
-    wandb_sweep(train_complete, conf, args.sweep_id, prefix="signet/")
+    wandb_sweep(train_complete_diverse)
