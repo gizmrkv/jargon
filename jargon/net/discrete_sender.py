@@ -43,7 +43,7 @@ class DiscreteSender(nn.Module):
             input_dim=output_embedding_dim,
             hidden_size=hidden_size,
             num_layers=num_layers,
-            bidirectional=bidirectional,
+            bidirectional=bool(bidirectional),
             cell_type=cell_type,
             cell_args=cell_args,
         )
@@ -55,11 +55,13 @@ class DiscreteSender(nn.Module):
         self, x: Tensor, message: Tensor | None = None
     ) -> Tuple[Tensor, Tensor]:
         x = self.input_embedding(x)
-
         x = x.reshape(x.shape[0], -1)
         x = self.input_linear(x)
         hidden = x.repeat(self.num_layers * (1 + self.bidirectional), 1, 1)
-        hidden0 = hidden
+
+        if self.peeky:
+            hidden0 = hidden
+
         if isinstance(self.rnn.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
