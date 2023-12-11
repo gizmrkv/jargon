@@ -15,6 +15,7 @@ def train_imitation_basic(
     max_len: int = 8,
     num_senders: int = 3,
     num_receivers: int = 1,
+    adaptation_graph_type: str = "fully",
     imitation_graph_type: str = "fully",
     instantly: bool = False,
     sender_input_embedding_dim: int = 16,
@@ -64,8 +65,18 @@ def train_imitation_basic(
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
 
     network = {s: {r for r in receivers} for s in senders}
-    adaptation_targets = {s: {r for r in receivers} for s in senders}
-    adaptation_targets |= {r: {s for s in senders} for r in receivers}
+
+    if adaptation_graph_type == "fully":
+        adaptation_targets = {s: {r for r in receivers} for s in senders}
+        adaptation_targets |= {r: {s for s in senders} for r in receivers}
+    elif adaptation_graph_type == "individual":
+        assert (
+            num_senders == num_receivers
+        ), "Individual adaptation requires equal numbers of senders and receivers"
+        adaptation_targets = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
+        adaptation_targets |= {f"R{i}": {f"S{i}"} for i in range(num_receivers)}
+    else:
+        raise ValueError(f"Unknown adaptation graph type {adaptation_graph_type}")
 
     if imitation_graph_type == "fully":
         imitation_triggers = {s: {r for r in receivers} for s in senders}
@@ -83,6 +94,8 @@ def train_imitation_basic(
     elif imitation_graph_type == "none":
         imitation_triggers = {s: set() for s in senders}
         imitation_targets = {s: set() for s in senders}
+    else:
+        raise ValueError(f"Unknown imitation graph type {imitation_graph_type}")
 
     game = SignalingNetworkGame(senders, receivers, network)
     train_imitation(
