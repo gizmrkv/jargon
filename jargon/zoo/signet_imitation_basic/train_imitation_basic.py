@@ -22,10 +22,12 @@ def train_imitation_basic(
     sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 200,
     sender_num_layers: int = 1,
-    sender_bidirectional: bool = False,
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
     sender_peeky: bool = False,
+    sender_attention: bool = False,
+    sender_attention_weight: bool = False,
+    sender_attention_dropout: float = 0.0,
     receiver_embedding_dim: int = 16,
     receiver_hidden_size: int = 200,
     receiver_num_layers: int = 1,
@@ -43,10 +45,12 @@ def train_imitation_basic(
         output_embedding_dim=sender_output_embedding_dim,
         hidden_size=sender_hidden_size,
         num_layers=sender_num_layers,
-        bidirectional=sender_bidirectional,
         cell_type=sender_cell_type,
         cell_args=sender_cell_args,
         peeky=sender_peeky,
+        attention=sender_attention,
+        attention_weight=sender_attention_weight,
+        attention_dropout=sender_attention_dropout,
     )
     receiver = DiscreteReceiver(
         num_elems=num_elems,
@@ -114,5 +118,11 @@ def train_imitation_basic(
 
 if __name__ == "__main__":
     from jargon.zoo.utils import wandb_sweep
+
+    # train_imitation_basic(
+    #     sender_attention=False,
+    #     sender_attention_weight=True,
+    #     sender_attention_dropout=0.1,
+    # )
 
     wandb_sweep(train_imitation_basic)
