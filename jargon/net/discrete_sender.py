@@ -19,6 +19,7 @@ class DiscreteSender(nn.Module):
         hidden_size: int,
         num_layers: int = 1,
         bidirectional: bool = False,
+        dropout: float = 0.0,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
         peeky: bool = False,
@@ -33,6 +34,7 @@ class DiscreteSender(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bidirectional = bidirectional
+        self.dropout = dropout
         self.cell_type = cell_type
         self.cell_args = cell_args
         self.peeky = peeky
@@ -44,11 +46,12 @@ class DiscreteSender(nn.Module):
             hidden_size=hidden_size,
             num_layers=num_layers,
             bidirectional=bool(bidirectional),
+            dropout=dropout,
             cell_type=cell_type,
             cell_args=cell_args,
         )
         self.input_linear = nn.Linear(input_embedding_dim * num_attrs, hidden_size)
-        self.output_linear = nn.Linear(hidden_size * (1 + bidirectional), vocab_size)
+        self.output_linear = nn.Linear(hidden_size, vocab_size)
         self.sos_embedding = nn.Parameter(torch.randn(output_embedding_dim))
 
     def forward(
@@ -56,8 +59,16 @@ class DiscreteSender(nn.Module):
     ) -> Tuple[Tensor, Tensor]:
         x = self.input_embedding(x)
         x = x.reshape(x.shape[0], -1)
-        x = self.input_linear(x)
-        hidden = x.repeat(self.num_layers * (1 + self.bidirectional), 1, 1)
+        hidden = self.input_linear(x).unsqueeze(0)
+
+        if self.num_layers >= 2:
+            hidden = torch.cat(
+                [hidden, torch.zeros_like(hidden).repeat(self.num_layers - 1, 1, 1)],
+                dim=0,
+            )
+
+        if self.bidirectional:
+            hidden = torch.cat([hidden, hidden], dim=0)
 
         if self.peeky:
             hidden0 = hidden
@@ -71,6 +82,11 @@ class DiscreteSender(nn.Module):
             logits_list = []
             for _ in range(self.max_len):
                 logits_step, hidden = self.rnn(emb, hidden)
+                if self.bidirectional:
+                    logits_step = (
+                        logits_step[:, :, : self.hidden_size]
+                        + logits_step[:, :, self.hidden_size :]
+                    )
                 logits_step = self.output_linear(logits_step)
 
                 if self.training:
@@ -94,6 +110,10 @@ class DiscreteSender(nn.Module):
         else:
             emb = torch.cat([emb, self.output_embedding(message[:, :-1])], dim=1)
             logits, _ = self.rnn(emb, hidden)
+            if self.bidirectional:
+                logits = (
+                    logits[:, :, : self.hidden_size] + logits[:, :, self.hidden_size :]
+                )
             logits = self.output_linear(logits)
             if self.training:
                 distr = Categorical(logits=logits)

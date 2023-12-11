@@ -36,6 +36,7 @@ class RNN(nn.Module):
         hidden_size: int,
         num_layers: int = 1,
         bidirectional: bool = False,
+        dropout: float = 0.0,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
     ) -> None:
@@ -44,6 +45,7 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bidirectional = bidirectional
+        self.dropout = dropout
 
         if isinstance(cell_type, str):
             cell_type = getattr(nn, cell_type)
@@ -56,6 +58,7 @@ class RNN(nn.Module):
             hidden_size,
             num_layers,
             bidirectional=bidirectional,
+            dropout=dropout,
             batch_first=True,
             **self.cell_args
         )

@@ -16,6 +16,7 @@ class DiscreteReceiver(nn.Module):
         hidden_size: int,
         num_layers: int = 1,
         bidirectional: bool = False,
+        dropout: float = 0.0,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
         instantly: bool = False,
@@ -28,6 +29,7 @@ class DiscreteReceiver(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.bidirectional = bidirectional
+        self.dropout = dropout
         self.cell_type = cell_type
         self.cell_args = cell_args
         self.instantly = instantly
@@ -38,16 +40,18 @@ class DiscreteReceiver(nn.Module):
             hidden_size=hidden_size,
             num_layers=num_layers,
             bidirectional=bidirectional,
+            dropout=dropout,
             cell_type=cell_type,
             cell_args=cell_args,
         )
-        self.output_linear = nn.Linear(
-            hidden_size * (1 + bidirectional), num_attrs * num_elems
-        )
+        self.output_linear = nn.Linear(hidden_size, num_attrs * num_elems)
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.embedding(x)
         logits, _ = self.rnn(x)
+        if self.bidirectional:
+            logits = logits[:, :, : self.hidden_size] + logits[:, :, self.hidden_size :]
+
         if not self.instantly:
             logits = logits[:, -1, :]
 
