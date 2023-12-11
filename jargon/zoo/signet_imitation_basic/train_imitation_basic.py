@@ -80,6 +80,9 @@ def train_imitation_basic(
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders):
             imitation_targets[f"S{i}"] = {f"S{(i+1)%num_senders}"}
+    elif imitation_graph_type == "none":
+        imitation_triggers = {s: set() for s in senders}
+        imitation_targets = {s: set() for s in senders}
 
     game = SignalingNetworkGame(senders, receivers, network)
     train_imitation(
