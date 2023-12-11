@@ -8,15 +8,15 @@ from jargon.net import DiscreteReceiver, DiscreteSender
 from jargon.zoo.signet_imitation.train_imitation import train_imitation
 
 
-def train_imitation_oneway(
+def train_imitation_basic(
     num_elems: int = 50,
     num_attrs: int = 2,
     vocab_size: int = 50,
     max_len: int = 8,
     num_senders: int = 3,
     num_receivers: int = 1,
+    imitation_graph_type: str = "fully",
     instantly: bool = False,
-    additional_imitation_edges: str = "",
     sender_input_embedding_dim: int = 16,
     sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 200,
@@ -67,16 +67,19 @@ def train_imitation_oneway(
     adaptation_targets = {s: {r for r in receivers} for s in senders}
     adaptation_targets |= {r: {s for s in senders} for r in receivers}
 
-    imitation_triggers = {s: {r for r in receivers} for s in senders}
-    imitation_targets = {s: set() for s in senders}
-    for i in range(num_senders - 1):
-        imitation_targets[f"S{i}"] = {f"S{i+1}"}
-
-    if additional_imitation_edges:
-        additional_imitation_edges = additional_imitation_edges.split(",")
-        additional_imitation_edges = [e.split("->") for e in additional_imitation_edges]
-        for s1, s2 in additional_imitation_edges:
-            imitation_targets[s1].add(s2)
+    if imitation_graph_type == "fully":
+        imitation_triggers = {s: {r for r in receivers} for s in senders}
+        imitation_targets = {s: {s2 for s2 in senders if s2 != s} for s in senders}
+    elif imitation_graph_type == "oneway":
+        imitation_triggers = {s: {r for r in receivers} for s in senders}
+        imitation_targets = {s: set() for s in senders}
+        for i in range(num_senders - 1):
+            imitation_targets[f"S{i}"] = {f"S{i+1}"}
+    elif imitation_graph_type == "ring":
+        imitation_triggers = {s: {r for r in receivers} for s in senders}
+        imitation_targets = {s: set() for s in senders}
+        for i in range(num_senders):
+            imitation_targets[f"S{i}"] = {f"S{(i+1)%num_senders}"}
 
     game = SignalingNetworkGame(senders, receivers, network)
     train_imitation(
@@ -96,4 +99,4 @@ def train_imitation_oneway(
 if __name__ == "__main__":
     from jargon.zoo.utils import wandb_sweep
 
-    wandb_sweep(train_imitation_oneway)
+    wandb_sweep(train_imitation_basic)
