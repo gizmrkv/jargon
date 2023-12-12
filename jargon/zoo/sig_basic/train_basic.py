@@ -9,10 +9,10 @@ from jargon.zoo.sig.train import train
 
 
 def train_basic(
-    num_elems: int = 100,
-    num_attrs: int = 2,
-    vocab_size: int = 100,
-    max_len: int = 3,
+    num_elems: int = 10,
+    num_attrs: int = 3,
+    vocab_size: int = 10,
+    max_len: int = 10,
     entropy_loss_weight: float = 0.5,
     length_loss_weight: float = 0.0,
     sender_input_embedding_dim: int = 16,
@@ -31,6 +31,9 @@ def train_basic(
     receiver_bidirectional: bool = False,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
+    receiver_attention: bool = False,
+    receiver_attention_weight: bool = False,
+    receiver_attention_dropout: float = 0.0,
     **train_args: Any,
 ) -> None:
     sender = DiscreteSender(
@@ -59,6 +62,9 @@ def train_basic(
         bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
+        attention=receiver_attention,
+        attention_weight=receiver_attention_weight,
+        attention_dropout=receiver_attention_dropout,
     )
     game = SignalingGame(sender, receiver)
     loss = Loss(

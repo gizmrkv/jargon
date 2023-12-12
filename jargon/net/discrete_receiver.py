@@ -1,8 +1,11 @@
 from typing import Any, Dict, Type
 
+import torch
 from torch import Tensor, nn
 from torch.distributions import Categorical
 
+from .attention import ScaledDotProductAttention
+from .mlp import MLP
 from .rnn import RNN
 
 
@@ -19,7 +22,9 @@ class DiscreteReceiver(nn.Module):
         dropout: float = 0.0,
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
-        instantly: bool = False,
+        attention: bool = False,
+        attention_weight: bool = False,
+        attention_dropout: float = 0.0,
     ) -> None:
         super().__init__()
         self.num_elems = num_elems
@@ -32,7 +37,9 @@ class DiscreteReceiver(nn.Module):
         self.dropout = dropout
         self.cell_type = cell_type
         self.cell_args = cell_args
-        self.instantly = instantly
+        self.attention = attention
+        self.attention_weight = attention_weight
+        self.attention_dropout = attention_dropout
 
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.rnn = RNN(
@@ -44,22 +51,46 @@ class DiscreteReceiver(nn.Module):
             cell_type=cell_type,
             cell_args=cell_args,
         )
-        self.output_linear = nn.Linear(hidden_size, num_attrs * num_elems)
+        self.output_layers = nn.ModuleList(
+            [
+                MLP(
+                    input_dim=hidden_size + (hidden_size if attention else 0),
+                    output_dim=num_elems,
+                    hidden_sizes=[hidden_size],
+                    activation_type=nn.GELU,
+                )
+                for _ in range(num_attrs)
+            ]
+        )
+
+        if attention:
+            self.attention_layer = ScaledDotProductAttention(
+                hidden_size, attention_dropout, attention_weight
+            )
+            self.queries = nn.Parameter(torch.randn(num_attrs, hidden_size))
 
     def forward(self, x: Tensor) -> Tensor:
-        x = self.embedding(x)
-        logits, _ = self.rnn(x)
+        emb = self.embedding(x)
+        output, hidden = self.rnn(emb)
+
         if self.bidirectional:
-            logits = logits[:, :, : self.hidden_size] + logits[:, :, self.hidden_size :]
+            output = output[:, :, : self.hidden_size] + output[:, :, self.hidden_size :]
 
-        if not self.instantly:
-            logits = logits[:, -1, :]
+        if self.attention:
+            src = output
 
-        logits = self.output_linear(logits)
-        if self.instantly:
-            logits = logits.reshape(-1, x.shape[1], self.num_attrs, self.num_elems)
-        else:
-            logits = logits.reshape(-1, self.num_attrs, self.num_elems)
+        output = output.sum(dim=1)
+        output = output.unsqueeze(1).repeat(1, self.num_attrs, 1)
+
+        if self.attention:
+            tgt = self.queries.unsqueeze(0).repeat(output.shape[0], 1, 1)
+            attn, _ = self.attention_layer(tgt, src, src)
+            output = torch.cat([output, attn], dim=-1)
+
+        logits_list = [
+            layer(output[:, i, :]) for i, layer in enumerate(self.output_layers)
+        ]
+        logits = torch.stack(logits_list, dim=1)
 
         if self.training:
             distr = Categorical(logits=logits)
