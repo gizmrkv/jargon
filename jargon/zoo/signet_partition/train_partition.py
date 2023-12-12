@@ -18,8 +18,6 @@ def train_partition(
     length_loss_weight: float = 0.0,
     num_agents: int = 2,
     network_mode: Literal["fully"] = "fully",
-    discount_factor: float = 0.1,
-    instantly: bool = False,
     sender_input_embedding_dim: int = 16,
     sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 500,
@@ -58,7 +56,6 @@ def train_partition(
         bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
-        instantly=instantly,
     )
 
     senders = {f"S{i}": deepcopy(sender) for i in range(num_agents)}
@@ -82,8 +79,6 @@ def train_partition(
         adaptation_targets=adaptation_targets,
         entropy_loss_weight=entropy_loss_weight,
         length_loss_weight=length_loss_weight,
-        discount_factor=discount_factor,
-        instantly=instantly,
     )
 
     train_reset(
@@ -91,7 +86,6 @@ def train_partition(
         num_attrs=num_attrs,
         vocab_size=vocab_size,
         max_len=max_len,
-        instantly=instantly,
         game=game,
         loss_fn=loss,
         additional_metrics_fn=loss.metrics,

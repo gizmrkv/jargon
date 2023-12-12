@@ -29,7 +29,6 @@ def train(
     vocab_size: int = 50,
     max_len: int = 8,
     fix_len: bool = False,
-    instantly: bool = False,
     max_epochs: int = 5001,
     batch_size: int = 65536,
     lr: float = 1e-3,
@@ -91,7 +90,6 @@ def train(
         receivers=game.receivers,
         log_dir=log_dir / "train",
         eos=eos,
-        instantly=instantly,
     )
     metrics_test_fn = Metrics(
         num_elems=num_elems,
@@ -102,7 +100,6 @@ def train(
         receivers=game.receivers,
         log_dir=log_dir / "test",
         eos=eos,
-        instantly=instantly,
     )
     lang_metrics_fn = LanguageMetrics(game.senders, log_dir, eos)
 

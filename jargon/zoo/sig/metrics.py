@@ -18,14 +18,12 @@ class Metrics:
         vocab_size: int,
         max_len: int,
         eos: int = 0,
-        instantly: bool = False,
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
         self.vocab_size = vocab_size
         self.max_len = max_len
         self.eos = eos
-        self.instantly = instantly
         self.y_processor = lambda x: drop_padding(x, eos=self.eos)
 
     def __call__(self, batch: Batch) -> Dict[str, Any]:
@@ -35,9 +33,6 @@ class Metrics:
         msg_logits: Tensor = batch.message_logits  # type: ignore
         msg_mask: Tensor = batch.message_mask  # type: ignore
         msg_length: Tensor = batch.message_length  # type: ignore
-
-        if self.instantly:
-            output = output[:, -1, :]
 
         acc_flag = output == target
         acc_comp = acc_flag.all(-1).float()

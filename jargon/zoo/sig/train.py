@@ -29,7 +29,6 @@ def train(
     vocab_size: int = 50,
     max_len: int = 10,
     fix_len: bool = False,
-    instantly: bool = False,
     max_epochs: int = 3001,
     batch_size: int = 65536,
     lr: float = 1e-3,
@@ -74,7 +73,7 @@ def train(
     optimizer = optim.Adam(game.parameters(), lr=lr)
     eos = -1 if fix_len else 0
     game.eos = eos
-    metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len, eos, instantly)
+    metrics_fn = Metrics(num_elems, num_attrs, vocab_size, max_len, eos)
     lang_metrics_fn = LanguageMetrics(log_dir, eos)
 
     def test_fn(epoch: int) -> None:

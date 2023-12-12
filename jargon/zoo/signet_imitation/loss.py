@@ -31,8 +31,6 @@ class ImitationLoss:
                 trigger_list = []
                 for trigger_r in self.imitation_triggers[name_s]:
                     output: Tensor = batch.outputs[target_s][trigger_r]  # type: ignore
-                    if self.loss.instantly:
-                        output = output[:, -1, :]
                     mask = output == target
                     trigger_list.append(mask)
 

@@ -22,8 +22,6 @@ class Loss:
         adaptation_targets: Mapping[str, Set[str]],
         entropy_loss_weight: float = 0.0,
         length_loss_weight: float = 0.0,
-        instantly: bool = False,
-        discount_factor: float = 0.99,
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
@@ -33,16 +31,12 @@ class Loss:
         self.adaptation_targets = adaptation_targets
         self.entropy_loss_weight = entropy_loss_weight
         self.length_loss_weight = length_loss_weight
-        self.instantly = instantly
-        self.discount_factor = discount_factor
 
     def receiver_communication_losses(
         self, batch: Batch
     ) -> Dict[str, Dict[str, Tensor]]:
         outputs_logits: Batch = batch.outputs_logits  # type: ignore
         target: Tensor = batch.target  # type: ignore
-        if self.instantly:
-            target = target.unsqueeze(1).repeat(1, self.max_len, 1)
         target = target.reshape(-1)
 
         losses: Dict[str, Dict[str, Tensor]] = {k: {} for k in self.game.senders}
@@ -50,10 +44,7 @@ class Loss:
             for name_r, logits in output_logits_r.items():  # type: ignore
                 logits = logits.reshape(-1, self.num_elems)  # type: ignore
                 loss_r = F.cross_entropy(logits, target, reduction="none")
-                if self.instantly:
-                    loss_r = loss_r.reshape(-1, self.max_len, self.num_attrs).mean(-1)
-                else:
-                    loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
+                loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
                 losses[name_s][name_r] = loss_r
         return losses
 
@@ -69,8 +60,7 @@ class Loss:
             distr = Categorical(logits=msg_logits)
             log_prob = distr.log_prob(message)
             log_prob = log_prob * msg_mask
-            if not self.instantly:
-                log_prob = log_prob.sum(-1)
+            log_prob = log_prob.sum(-1)
 
             targets_r = self.adaptation_targets[name_s]
             targets_r.intersection_update(set(receiver_communication_losses[name_s]))
@@ -124,9 +114,6 @@ class Loss:
         for name_s in self.game.senders:
             loss_s = sender_communication_losses[name_s]
 
-            if self.instantly:
-                loss_s = loss_s.sum(-1)
-
             if sender_entropy_losses is not None:
                 loss_s += self.entropy_loss_weight * sender_entropy_losses[name_s]
 
@@ -147,9 +134,6 @@ class Loss:
                 losses_r.append(receiver_communication_losses[target_s][name_r])
 
             loss_r = torch.stack(losses_r, dim=-1).sum(dim=-1)
-
-            if self.instantly:
-                loss_r = loss_r.sum(-1)
 
             losses[name_r] = loss_r
         return losses

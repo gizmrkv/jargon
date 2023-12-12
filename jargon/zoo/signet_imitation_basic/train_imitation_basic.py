@@ -17,7 +17,6 @@ def train_imitation_basic(
     num_receivers: int = 1,
     adaptation_graph_type: str = "fully",
     imitation_graph_type: str = "fully",
-    instantly: bool = False,
     sender_input_embedding_dim: int = 16,
     sender_output_embedding_dim: int = 16,
     sender_hidden_size: int = 200,
@@ -62,7 +61,6 @@ def train_imitation_basic(
         bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
-        instantly=instantly,
     )
 
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
@@ -111,7 +109,6 @@ def train_imitation_basic(
         num_attrs=num_attrs,
         vocab_size=vocab_size,
         max_len=max_len,
-        instantly=instantly,
         **train_args,
     )
 

@@ -20,8 +20,6 @@ def train_complete_diverse(
     num_receivers: int = 2,
     entropy_loss_weight: float = 0.0,
     length_loss_weight: float = 0.0,
-    discount_factor: float = 0.1,
-    instantly: bool = False,
     imitation: bool = False,
     imitation_threshold: float = 0.99,
     poor_sender_input_embedding_dim: int = 16,
@@ -78,7 +76,6 @@ def train_complete_diverse(
         bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
-        instantly=instantly,
     )
     senders = {}
     senders |= {f"gS{i}": deepcopy(good_sender) for i in range(num_good_senders)}
@@ -105,8 +102,6 @@ def train_complete_diverse(
         entropy_loss_weight=entropy_loss_weight,
         length_loss_weight=length_loss_weight,
         adaptation_targets=adaptation_targets,
-        instantly=instantly,
-        discount_factor=discount_factor,
     )
     loss = ImitationLoss(
         loss=loss,
@@ -119,7 +114,6 @@ def train_complete_diverse(
         num_attrs=num_attrs,
         vocab_size=vocab_size,
         max_len=max_len,
-        instantly=instantly,
         game=game,
         loss_fn=loss,
         additional_metrics_fn=loss.metrics,

@@ -17,8 +17,6 @@ class Loss:
         max_len: int,
         entropy_loss_weight: float = 0.0,
         length_loss_weight: float = 0.0,
-        instantly: bool = False,
-        discount_factor: float = 0.99,
     ) -> None:
         self.num_elems = num_elems
         self.num_attrs = num_attrs
@@ -26,23 +24,16 @@ class Loss:
         self.max_len = max_len
         self.entropy_loss_weight = entropy_loss_weight
         self.length_loss_weight = length_loss_weight
-        self.instantly = instantly
-        self.discount_factor = discount_factor
 
     def receiver_loss(self, batch: Batch) -> Tensor:
         logits: Tensor = batch.output_logits  # type: ignore
         target: Tensor = batch.target  # type: ignore
 
         logits = logits.reshape(-1, self.num_elems)
-        if self.instantly:
-            target = target.unsqueeze(1).repeat(1, self.max_len, 1)
 
         target = target.reshape(-1)
         loss_r = F.cross_entropy(logits, target, reduction="none")
-        if self.instantly:
-            loss_r = loss_r.reshape(-1, self.max_len, self.num_attrs).mean(-1)
-        else:
-            loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
+        loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
 
         return loss_r
 
@@ -55,8 +46,7 @@ class Loss:
         distr = Categorical(logits=msg_logits)
         log_prob = distr.log_prob(message)
         log_prob = log_prob * msg_mask
-        if not self.instantly:
-            log_prob = log_prob.sum(-1)
+        log_prob = log_prob.sum(-1)
 
         loss_s = pg_loss(log_prob, reward)
         return loss_s
@@ -90,9 +80,6 @@ class Loss:
         loss_s = self.sender_loss(batch, loss_r)
 
         loss = loss_r + loss_s
-
-        if self.instantly:
-            loss = loss.sum(-1)
 
         if self.entropy_loss_weight > 0.0:
             loss_ent = self.entropy_loss(batch)
