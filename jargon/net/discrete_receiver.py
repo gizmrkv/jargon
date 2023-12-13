@@ -67,24 +67,27 @@ class DiscreteReceiver(nn.Module):
             self.attention_layer = ScaledDotProductAttention(
                 hidden_size, attention_dropout, attention_weight
             )
-            self.queries = nn.Parameter(torch.randn(num_attrs, hidden_size))
+            self.queries = nn.ModuleList(
+                [nn.Linear(hidden_size, hidden_size) for _ in range(num_attrs)]
+            )
 
     def forward(self, x: Tensor) -> Tensor:
         emb = self.embedding(x)
-        output, hidden = self.rnn(emb)
+        outputs, _ = self.rnn(emb)
 
         if self.bidirectional:
-            output = output[:, :, : self.hidden_size] + output[:, :, self.hidden_size :]
+            outputs = (
+                outputs[:, :, : self.hidden_size] + outputs[:, :, self.hidden_size :]
+            )
 
-        if self.attention:
-            src = output
-
-        output = output.sum(dim=1)
+        output = outputs.sum(dim=1)
         output = output.unsqueeze(1).repeat(1, self.num_attrs, 1)
 
         if self.attention:
-            tgt = self.queries.unsqueeze(0).repeat(output.shape[0], 1, 1)
-            attn, _ = self.attention_layer(tgt, src, src)
+            tgt = torch.stack(
+                [layer(output[:, i, :]) for i, layer in enumerate(self.queries)], dim=1
+            )
+            attn, _ = self.attention_layer(tgt, outputs, outputs)
             output = torch.cat([output, attn], dim=-1)
 
         logits_list = [
