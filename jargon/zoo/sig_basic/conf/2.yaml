@@ -1,0 +1,48 @@
+method: "grid"
+project: "jargon"
+name: "sig_basic_2"
+
+metric:
+  name: "test/acc/part.mean"
+  goal: "maximize"
+
+parameters:
+  seed:
+    min: 0
+    max: 2
+  entropy_loss_weight:
+    values: [0.0, 0.2, 0.4]
+  sender_attention:
+    values: [1, 0]
+  sender_attention_weight:
+    values: [1, 0]
+  sender_attention_dropout:
+    values: [0.0, 0.1, 0.2]
+
+  max_epochs:
+    value: 2000
+  num_elems:
+    value: 30
+  num_attrs:
+    value: 2
+  vocab_size:
+    value: 30
+  max_len:
+    value: 10
+
+  sender_input_embedding_dim:
+    value: 32
+  sender_output_embedding_dim:
+    value: 32
+  sender_hidden_size:
+    value: 200
+  sender_num_layers:
+    value: 1
+  sender_peeky:
+    value: 0
+  receiver_embedding_dim:
+    value: 16
+  receiver_hidden_size:
+    value: 200
+  receiver_num_layers:
+    value: 1

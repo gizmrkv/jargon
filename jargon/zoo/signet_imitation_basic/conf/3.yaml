@@ -1,0 +1,55 @@
+method: "grid"
+project: "jargon"
+name: "signet_imitation_basic_3"
+
+metric:
+  name: "test/acc/part.mean.mean"
+  goal: "maximize"
+
+parameters:
+  seed:
+    min: 0
+    max: 4
+  max_epochs:
+    value: 20000
+  num_elems:
+    value: 30
+  num_attrs:
+    value: 2
+  vocab_size:
+    value: 30
+  max_len:
+    value: 10
+  entropy_loss_weight:
+    values: [0.0, 0.2, 0.4]
+  length_loss_weight:
+    value: 0.0
+  imitation:
+    value: 1
+  imitation_threshold:
+    # value: 1.0
+    values: [0.0, 0.33, 0.66, 0.99]
+  num_senders:
+    value: 5
+  num_receivers:
+    value: 5
+  adaptation_graph_type:
+    value: "individual"
+  imitation_graph_type:
+    values: ["none", "fully", "oneway", "oneway2", "ring", "ring2"]
+  sender_input_embedding_dim:
+    value: 32
+  sender_output_embedding_dim:
+    value: 32
+  sender_hidden_size:
+    value: 200
+  sender_num_layers:
+    value: 1
+  sender_peeky:
+    value: 0
+  receiver_embedding_dim:
+    value: 16
+  receiver_hidden_size:
+    value: 200
+  receiver_num_layers:
+    value: 1

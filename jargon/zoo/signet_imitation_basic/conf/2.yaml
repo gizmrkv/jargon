@@ -1,0 +1,56 @@
+method: "bayes"
+project: "jargon"
+name: "signet_imitation_basic_2"
+
+metric:
+  name: "test/acc/part.mean.mean"
+  goal: "maximize"
+
+parameters:
+  max_epochs:
+    value: 4000
+  num_elems:
+    value: 10
+  num_attrs:
+    value: 3
+  vocab_size:
+    value: 10
+  max_len:
+    value: 10
+  entropy_loss_weight:
+    min: 0.0
+    max: 0.5
+  length_loss_weight:
+    value: 0.0
+  imitation:
+    values: [1, 0]
+  imitation_threshold:
+    min: 0.0
+    max: 1.0
+  num_senders:
+    value: 4
+  num_receivers:
+    value: 1
+  imitation_graph_type:
+    values: ["fully", "oneway", "ring"]
+  sender_input_embedding_dim:
+    min: 2
+    max: 20
+  sender_output_embedding_dim:
+    min: 2
+    max: 20
+  sender_hidden_size:
+    min: 10
+    max: 200
+  sender_num_layers:
+    values: [1, 2]
+  sender_peeky:
+    values: [1, 0]
+  receiver_embedding_dim:
+    min: 2
+    max: 20
+  receiver_hidden_size:
+    min: 10
+    max: 200
+  receiver_num_layers:
+    values: [1, 2]
