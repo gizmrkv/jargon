@@ -33,6 +33,9 @@ def train_imitation_basic(
     receiver_bidirectional: bool = False,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
+    receiver_attention: bool = False,
+    receiver_attention_weight: bool = False,
+    receiver_attention_dropout: float = 0.0,
     **train_args: Any,
 ) -> None:
     sender = DiscreteSender(
@@ -61,6 +64,9 @@ def train_imitation_basic(
         bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
+        attention=receiver_attention,
+        attention_weight=receiver_attention_weight,
+        attention_dropout=receiver_attention_dropout,
     )
 
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
@@ -88,11 +94,23 @@ def train_imitation_basic(
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders - 1):
             imitation_targets[f"S{i}"] = {f"S{i+1}"}
+    elif imitation_graph_type == "oneway2":
+        imitation_triggers = {s: {r for r in receivers} for s in senders}
+        imitation_targets = {s: set() for s in senders}
+        for i in range(num_senders - 1):
+            imitation_targets[f"S{i}"] = {f"S{i+1}"}
+            imitation_targets[f"S{i+1}"] = {f"S{i}"}
     elif imitation_graph_type == "ring":
         imitation_triggers = {s: {r for r in receivers} for s in senders}
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders):
             imitation_targets[f"S{i}"] = {f"S{(i+1)%num_senders}"}
+    elif imitation_graph_type == "ring2":
+        imitation_triggers = {s: {r for r in receivers} for s in senders}
+        imitation_targets = {s: set() for s in senders}
+        for i in range(num_senders):
+            imitation_targets[f"S{i}"] = {f"S{(i+1)%num_senders}"}
+            imitation_targets[f"S{(i+1)%num_senders}"] = {f"S{i}"}
     elif imitation_graph_type == "none":
         imitation_triggers = {s: set() for s in senders}
         imitation_targets = {s: set() for s in senders}
@@ -115,11 +133,5 @@ def train_imitation_basic(
 
 if __name__ == "__main__":
     from jargon.zoo.utils import wandb_sweep
-
-    # train_imitation_basic(
-    #     sender_attention=False,
-    #     sender_attention_weight=True,
-    #     sender_attention_dropout=0.1,
-    # )
 
     wandb_sweep(train_imitation_basic)
