@@ -68,6 +68,16 @@ class Batch:
         ), f"{key} is not a tensor or batch"
         return self.__dict__[key]
 
+    def get_tensor(self, key: str) -> Tensor:
+        value = self.__dict__[key]
+        assert isinstance(value, Tensor), f"{key} is not a tensor"
+        return value
+
+    def get_batch(self, key: str) -> "Batch":
+        value = self.__dict__[key]
+        assert isinstance(value, Batch), f"{key} is not a batch"
+        return value
+
     def __iter__(self) -> Iterable[str]:
         return iter(self.__dict__)
 
