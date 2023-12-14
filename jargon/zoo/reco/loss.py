@@ -16,12 +16,18 @@ class Loss:
         self.num_attrs = num_attrs
 
     def __call__(self, batch: Batch) -> Tensor:
-        output: Tensor = batch.output  # type: ignore
-        target: Tensor = batch.target  # type: ignore
+        # [batch, num_attrs, num_elems; float]
+        output = batch.get_tensor("output")
+        # [batch, num_attrs; int]
+        target = batch.get_tensor("target")
 
+        # [batch * num_attrs, num_elems; float]
         output = output.reshape(-1, self.num_elems)
+        # [batch * num_attrs; int]
         target = target.reshape(-1)
+        # [batch * num_attrs; float]
         loss = F.cross_entropy(output, target, reduction="none")
+        # [batch; float]
         loss = loss.reshape(-1, self.num_attrs).mean(-1)
         return loss
 

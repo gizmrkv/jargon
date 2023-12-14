@@ -23,10 +23,15 @@ def padding_mask(message: Tensor, eos: int = 0) -> Tensor:
     tensor([[1, 1, 1, 1, 0],
             [1, 1, 1, 0, 0]])
     """
+    # [batch, max_len; bool]
     mask = message == eos
+    # [batch; int]
     indices = torch.argmax(mask.int(), dim=1)
+    # [batch; bool]
     no_mask = ~mask.any(dim=1)
     indices[no_mask] = message.shape[1]
+    # [batch, max_len; bool]
     mask = torch.arange(message.shape[1]).expand(message.shape).to(message.device)
+    # [batch, max_len; int]
     mask = (mask <= indices.unsqueeze(-1)).long()
     return mask

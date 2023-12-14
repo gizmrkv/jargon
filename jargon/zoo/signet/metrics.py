@@ -96,11 +96,15 @@ class Metrics:
 
 
 def accuracy_metrics(batch: Batch) -> Dict[str, float]:
+    outputs = batch.get_batch("outputs")
     metrics: Dict[str, float] = {}
-    for name_s, outputs in batch.outputs.items():  # type: ignore
-        for name_r, output in outputs.items():  # type: ignore
-            acc_flag = output == batch.target  # type: ignore
+    for name_s, outs in outputs.items():
+        for name_r, output in outs.items():
+            # [batch, num_attrs; bool]
+            acc_flag = output == batch.get_tensor("target")
+            # [batch; float]
             acc_comp = acc_flag.all(-1).float()
+            # [batch; float]
             acc_part = acc_flag.float()
             metrics |= {
                 f"acc/comp.{name_s}->{name_r}.mean": acc_comp.mean().item(),
@@ -129,19 +133,29 @@ def accuracy_dataframe(
 
 
 def message_metrics(batch: Batch, vocab_size: int, max_len: int) -> Dict[str, float]:
+    messages = batch.get_batch("messages")
+    msgs_logits = batch.get_batch("messages_logits")
+    msgs_length = batch.get_batch("messages_length")
+    msgs_mask = batch.get_batch("messages_mask")
     metrics: Dict[str, float] = {}
-    for name_s in batch.messages:  # type: ignore
-        message: Tensor = batch.messages[name_s]  # type: ignore
-        msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
-        msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
-        msg_length: Tensor = batch.messages_length[name_s]  # type: ignore
+    for name_s in messages:
+        # [batch, max_len; int]
+        message = messages.get_tensor(name_s)
+        # [batch, max_len, vocab_size; float]
+        msg_logits = msgs_logits.get_tensor(name_s)
+        # [batch; int]
+        msg_length = msgs_length.get_tensor(name_s)
+        # [batch, max_len; int]
+        msg_mask = msgs_mask.get_tensor(name_s)
 
         distr = Categorical(logits=msg_logits.reshape(-1, max_len, vocab_size))
+        # [batch, max_len; float]
         entropy = distr.entropy() * msg_mask
 
+        # [batch; float]
         msg_length = msg_length.float()
 
-        unique = message.unique(dim=0).shape[0] / message.shape[0]
+        unique: float = message.unique(dim=0).shape[0] / message.shape[0]
 
         metrics |= {
             f"msg/entropy.{name_s}.mean": entropy.mean().item(),
@@ -165,28 +179,29 @@ def message_metrics(batch: Batch, vocab_size: int, max_len: int) -> Dict[str, fl
 def topsim_metrics(
     batch: Batch, y_processor: Callable[[NDArray[np.int32]], Sequence[Hashable]]
 ) -> Dict[str, float]:
-    input: Tensor = batch.input  # type: ignore
+    # [batch, num_attrs; int]
+    input = batch.get_tensor("input")
+    messages = batch.get_batch("messages")
     input = input.cpu().numpy()
 
-    # dists = ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
-    dists = ["Levenshtein"]
     metrics: Dict[str, float] = {}
-    for name_s, message in batch.messages.items():  # type: ignore
+    for name_s, message in messages.items():
+        # [batch, max_len; int]
         message = message.cpu().numpy()
         metrics |= {
-            f"topsim/{name_s}.{dist}": topographic_similarity(
-                input, message, y_processor=y_processor, y_dist=dist
+            f"topsim/{name_s}": topographic_similarity(
+                input, message, y_processor=y_processor, y_dist="Levenshtein"
             )
-            for dist in dists
         }
 
-    for dist in dists:
-        metrics[f"topsim/{dist}.mean"] = np.mean(
-            [v for k, v in metrics.items() if re.match(rf"topsim/.*{dist}", k)]
-        )
-        metrics[f"topsim/{dist}.std"] = np.std(
-            [v for k, v in metrics.items() if re.match(rf"topsim/.*{dist}", k)]
-        )
+    topsim_mean = np.mean(list(metrics.values()))
+    topsim_min = np.min(list(metrics.values()))
+    topsim_max = np.max(list(metrics.values()))
+    metrics |= {
+        f"topsim/mean": topsim_mean,
+        f"topsim/min": topsim_min,
+        f"topsim/max": topsim_max,
+    }
 
     return metrics
 
@@ -194,17 +209,25 @@ def topsim_metrics(
 def langsim_metrics(
     batch: Batch, y_processor: Callable[[NDArray[np.int32]], Sequence[Hashable]]
 ) -> Dict[str, float]:
-    names_s = list(batch.messages)  # type: ignore
+    messages = batch.get_batch("messages")
+    names_s = list(messages)
     metrics = {}
     for i in range(len(names_s)):
         for j in range(i + 1, len(names_s)):
-            m1 = batch.messages[names_s[i]].cpu().numpy()  # type: ignore
-            m2 = batch.messages[names_s[j]].cpu().numpy()  # type: ignore
+            m1 = messages.get_tensor(names_s[i]).cpu().numpy()
+            m2 = messages.get_tensor(names_s[j]).cpu().numpy()
             ls = language_similarity(m1, m2, processor=y_processor)
             metrics[f"langsim/{names_s[i]}-{names_s[j]}"] = ls
 
-    metrics["langsim/mean"] = np.mean(list(metrics.values()))
-    metrics["langsim/std"] = np.std(list(metrics.values()))
+    langsim_mean = np.mean(list(metrics.values()))
+    langsim_min = np.min(list(metrics.values()))
+    langsim_max = np.max(list(metrics.values()))
+    metrics |= {
+        f"langsim/mean": langsim_mean,
+        f"langsim/min": langsim_min,
+        f"langsim/max": langsim_max,
+    }
+
     return metrics
 
 
@@ -246,8 +269,8 @@ class LanguageMetrics:
             os.makedirs(d, exist_ok=True)
 
     def __call__(self, batch: Batch, epoch: int) -> Dict[str, float]:
-        input: Tensor = batch.input
-        messages: Dict[str, Tensor] = batch.messages
+        input = batch.get_tensor("input")
+        messages = batch.get_batch("messages")
 
         inp_lines = [",".join([str(y) for y in x]) for x in input.tolist()]
         langs = {}

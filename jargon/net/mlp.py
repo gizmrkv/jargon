@@ -70,9 +70,9 @@ class MLP(nn.Module):
                 mini_block(
                     input_dim=dims[i],
                     output_dim=dims[i + 1],
-                    activation=activation_type,  # type: ignore
+                    activation=activation_type,
                     activation_args=activation_args,
-                    normalization=normalization_type,  # type: ignore
+                    normalization=normalization_type,
                     normalization_args=normalization_args,
                     dropout=dropout,
                 )

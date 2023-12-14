@@ -202,9 +202,9 @@ def cat(batches: Iterable[Batch], dim: int = 0) -> Batch:
     sample = next(iter(batches))
     for k, v in sample.__dict__.items():
         if isinstance(v, Batch):
-            catted[k] = cat([b[k] for b in batches])  # type: ignore
+            catted[k] = cat([b[k] for b in batches])
         if isinstance(v, Tensor):
-            catted[k] = torch.cat([b[k] for b in batches], dim=dim)  # type: ignore
+            catted[k] = torch.cat([b[k] for b in batches], dim=dim)
 
     return Batch(**catted)
 
@@ -238,8 +238,8 @@ def stack(batches: Iterable[Batch], dim: int = 0) -> Batch:
     sample = next(iter(batches))
     for k, v in sample.__dict__.items():
         if isinstance(v, Batch):
-            stacked[k] = stack([b[k] for b in batches])  # type: ignore
+            stacked[k] = stack([b[k] for b in batches])
         if isinstance(v, Tensor):
-            stacked[k] = torch.stack([b[k] for b in batches], dim=dim)  # type: ignore
+            stacked[k] = torch.stack([b[k] for b in batches], dim=dim)
 
     return Batch(**stacked)

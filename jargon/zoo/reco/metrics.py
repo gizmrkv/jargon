@@ -12,14 +12,17 @@ class Metrics:
         self.num_attrs = num_attrs
 
     def __call__(self, batch: Batch) -> Dict[str, Any]:
-        output: Tensor = batch.output  # type: ignore
-        target: Tensor = batch.target  # type: ignore
+        # [batch, num_attrs, num_elems; float]
+        output = batch.get_tensor("output")
+        # [batch, num_attrs; int]
+        target = batch.get_tensor("target")
 
-        acc_flag = (
-            output.reshape(-1, self.num_attrs, self.num_elems).argmax(-1) == target
-        )
+        # [batch, num_attrs; bool]
+        acc_flag = output.argmax(-1) == target
+        # [batch; float]
         acc_comp = acc_flag.all(-1).float()
-        acc_part = acc_flag.float()
+        # [batch; float]
+        acc_part = acc_flag.mean(-1).float()
 
         metrics = {
             "acc/comp.mean": acc_comp.mean().item(),

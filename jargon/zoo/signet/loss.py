@@ -35,15 +35,20 @@ class Loss:
     def receiver_communication_losses(
         self, batch: Batch
     ) -> Dict[str, Dict[str, Tensor]]:
-        outputs_logits: Batch = batch.outputs_logits  # type: ignore
-        target: Tensor = batch.target  # type: ignore
+        outputs_logits = batch.get_batch("outputs_logits")
+        # [batch, num_attrs; int]
+        target = batch.get_tensor("target")
+        # [batch * num_attrs; int]
         target = target.reshape(-1)
 
         losses: Dict[str, Dict[str, Tensor]] = {k: {} for k in self.game.senders}
         for name_s, output_logits_r in outputs_logits.items():
-            for name_r, logits in output_logits_r.items():  # type: ignore
-                logits = logits.reshape(-1, self.num_elems)  # type: ignore
+            for name_r, logits in output_logits_r.items():
+                # [batch * num_attrs, num_elems; float]
+                logits = logits.reshape(-1, self.num_elems)
+                # [batch * num_attrs; float]
                 loss_r = F.cross_entropy(logits, target, reduction="none")
+                # [batch; float]
                 loss_r = loss_r.reshape(-1, self.num_attrs).mean(-1)
                 losses[name_s][name_r] = loss_r
         return losses
@@ -51,55 +56,87 @@ class Loss:
     def sender_communication_loss(
         self, batch: Batch, receiver_communication_losses: Dict[str, Dict[str, Tensor]]
     ) -> Dict[str, Tensor]:
+        messages = batch.get_batch("messages")
+        msgs_logits = batch.get_batch("messages_logits")
+        msgs_mask = batch.get_batch("messages_mask")
+
         losses: Dict[str, Tensor] = {}
         for name_s in self.game.senders:
-            message: Tensor = batch.messages[name_s]  # type: ignore
-            msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
-            msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
+            # [batch, max_len; int]
+            message = messages.get_tensor(name_s)
+            # [batch, max_len, vocab_size; float]
+            msg_logits = msgs_logits.get_tensor(name_s)
+            # [batch, max_len; int]
+            msg_mask = msgs_mask.get_tensor(name_s)
 
             distr = Categorical(logits=msg_logits)
+            # [batch, max_len; float]
             log_prob = distr.log_prob(message)
+            # [batch, max_len; float]
             log_prob = log_prob * msg_mask
+            # [batch; float]
             log_prob = log_prob.sum(-1)
 
             targets_r = self.adaptation_targets[name_s]
             targets_r.intersection_update(set(receiver_communication_losses[name_s]))
-
+            # [batch; float]
             loss_r = torch.stack(
                 [receiver_communication_losses[name_s][r] for r in targets_r], dim=-1
             ).mean(dim=-1)
+            # [batch; float]
             reward = -loss_r.detach()
+            # [batch; float]
             losses[name_s] = pg_loss(log_prob, reward)
 
         return losses
 
     def sender_entropy_loss(self, batch: Batch) -> Dict[str, Tensor]:
+        msgs_logits = batch.get_batch("messages_logits")
+        msgs_mask = batch.get_batch("messages_mask")
         losses: Dict[str, Tensor] = {}
         for name_s in self.game.senders:
-            msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
-            msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
+            # [batch, max_len, vocab_size; float]
+            msg_logits = msgs_logits.get_tensor(name_s)
+            # [batch, max_len; int]
+            msg_mask = msgs_mask.get_tensor(name_s)
+
             distr = Categorical(logits=msg_logits)
+            # [batch, max_len; float]
             entropy = distr.entropy() * msg_mask
+            # [batch; float]
             entropy = entropy.mean(dim=-1)
             losses[name_s] = -entropy
 
         return losses
 
     def sender_length_loss(self, batch: Batch) -> Dict[str, Tensor]:
+        messages = batch.get_batch("messages")
+        msgs_logits = batch.get_batch("messages_logits")
+        msgs_length = batch.get_batch("messages_length")
+        msgs_mask = batch.get_batch("messages_mask")
         losses: Dict[str, Tensor] = {}
         for name_s in self.game.senders:
-            message: Tensor = batch.messages[name_s]  # type: ignore
-            msg_logits: Tensor = batch.messages_logits[name_s]  # type: ignore
-            msg_length: Tensor = batch.messages_length[name_s]
-            msg_mask: Tensor = batch.messages_mask[name_s]  # type: ignore
+            # [batch, max_len; int]
+            message = messages.get_tensor(name_s)
+            # [batch, max_len, vocab_size; float]
+            msg_logits = msgs_logits.get_tensor(name_s)
+            # [batch; int]
+            msg_length = msgs_length.get_tensor(name_s)
+            # [batch, max_len; int]
+            msg_mask = msgs_mask.get_tensor(name_s)
 
             distr = Categorical(logits=msg_logits)
+            # [batch, max_len; float]
             log_prob = distr.log_prob(message)
+            # [batch, max_len; float]
             log_prob = log_prob * msg_mask
+            # [batch; float]
             log_prob = log_prob.sum(-1)
-
+            # [batch; float]
             length = msg_length.float() / message.shape[-1]
+            # [batch; float]
             loss_len = pg_loss(log_prob, -length)
+
             losses[name_s] = loss_len
 
         return losses

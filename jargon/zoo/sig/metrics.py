@@ -27,25 +27,36 @@ class Metrics:
         self.y_processor = lambda x: drop_padding(x, eos=self.eos)
 
     def __call__(self, batch: Batch) -> Dict[str, Any]:
-        output: Tensor = batch.output  # type: ignore
-        target: Tensor = batch.target  # type: ignore
-        message: Tensor = batch.message  # type: ignore
-        msg_logits: Tensor = batch.message_logits  # type: ignore
-        msg_mask: Tensor = batch.message_mask  # type: ignore
-        msg_length: Tensor = batch.message_length  # type: ignore
+        # [batch, num_attrs; int]
+        output = batch.get_tensor("output")
+        # [batch, num_attrs; int]
+        target = batch.get_tensor("target")
+        # [batch, max_len; int]
+        message = batch.get_tensor("message")
+        # [batch, max_len, vocab_size; float]
+        msg_logits = batch.get_tensor("message_logits")
+        # [batch, max_len; int]
+        msg_mask = batch.get_tensor("message_mask")
+        # [batch; int]
+        msg_length = batch.get_tensor("message_length")
 
+        # [batch, num_attrs; bool]
         acc_flag = output == target
+        # [batch; float]
         acc_comp = acc_flag.all(-1).float()
-        acc_part = acc_flag.float()
+        # [batch; float]
+        acc_part = acc_flag.mean(-1).float()
 
         distr_s = Categorical(
             logits=msg_logits.reshape(-1, self.max_len, self.vocab_size)
         )
+        # [batch, max_len; float]
         entropy_s = distr_s.entropy() * msg_mask
 
+        # [batch; float]
         msg_length = msg_length.float()
 
-        unique = message.unique(dim=0).shape[0] / message.shape[0]
+        unique: float = message.unique(dim=0).shape[0] / message.shape[0]
 
         return {
             "acc/comp.mean": acc_comp.mean().item(),
@@ -60,17 +71,17 @@ class Metrics:
         }
 
     def heavy_test(self, batch: Batch) -> Dict[str, Any]:
-        input: Tensor = batch.input
-        message: Tensor = batch.message
+        # [batch, num_attrs; int]
+        input = batch.get_tensor("input")
+        # [batch, max_len; int]
+        message = batch.get_tensor("message")
 
         input = input.cpu().numpy()
         message = message.cpu().numpy()
         topsims = {
-            f"topsim/{dist}": topographic_similarity(
+            f"topsim/topsim": topographic_similarity(
                 input, message, y_processor=self.y_processor
             )
-            for dist in ["Levenshtein"]
-            # for dist in ["Levenshtein", "DamerauLevenshtein", "OSA", "LCSseq"]
         }
 
         return topsims
@@ -83,8 +94,10 @@ class LanguageMetrics:
         os.makedirs(self.log_dir, exist_ok=True)
 
     def __call__(self, batch: Batch, epoch: int) -> Dict[str, float]:
-        input: Tensor = batch.input
-        message: Tensor = batch.message
+        # [batch, num_attrs; int]
+        input = batch.get_tensor("input")
+        # [batch, max_len; int]
+        message = batch.get_tensor("message")
 
         inp_lines = [",".join([str(y) for y in x]) for x in input.tolist()]
         msg_list = message.tolist()

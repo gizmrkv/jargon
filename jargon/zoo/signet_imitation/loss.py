@@ -22,28 +22,45 @@ class ImitationLoss:
         self.imitation_threshold = imitation_threshold
 
     def sender_imitation_losses(self, batch: Batch) -> Dict[str, Dict[str, Tensor]]:
-        input: Tensor = batch.input  # type: ignore
+        # [batch, num_attrs; int]
+        input = batch.get_tensor("input")
+        # [batch, num_attrs; int]
+        target = batch.get_tensor("target")
+        outputs = batch.get_batch("outputs")
+        messages = batch.get_batch("messages")
         losses: Dict[str, Dict[str, Tensor]] = {k: {} for k in self.loss.game.senders}
-        target: Tensor = batch.target  # type: ignore
         for name_s, targets_s in self.imitation_targets.items():
             for target_s in targets_s:
-                self.loss.game.senders[name_s]
+                outputs_s = outputs.get_batch(target_s)
+                triggers_r = self.imitation_triggers[name_s].intersection(outputs_s)
+                assert len(triggers_r) > 0, "No triggers found"
                 trigger_list = []
-                for trigger_r in self.imitation_triggers[name_s]:
-                    output: Tensor = batch.outputs[target_s][trigger_r]  # type: ignore
+                for trigger_r in triggers_r:
+                    # [batch, num_attrs; int]
+                    output = outputs.get_batch(target_s).get_tensor(trigger_r)
+                    # [batch, num_attrs; bool]
                     mask = output == target
                     trigger_list.append(mask)
 
+                # [batch; float]
                 trigger = torch.cat(trigger_list, dim=-1).float().mean(dim=-1)
+                # [batch; bool]
                 trigger = (trigger >= self.imitation_threshold).float()
 
-                tgt_message: Tensor = batch.messages[target_s]  # type: ignore
+                # [batch, max_len; int]
+                tgt_message = messages.get_tensor(target_s)
+                # [batch, max_len, vocab_size; float]
                 _, logits = self.loss.game.senders[name_s](input, message=tgt_message)
+                # [batch * max_len; int]
                 tgt_message = tgt_message.reshape(-1)
+                # [batch * max_len, vocab_size; float]
                 logits = logits.reshape(-1, self.loss.vocab_size)
 
+                # [batch * max_len; float]
                 loss = F.cross_entropy(logits, tgt_message, reduction="none")
+                # [batch; float]
                 loss = loss.reshape(-1, self.loss.max_len).mean(-1)
+                # [batch; float]
                 loss = loss * trigger
                 losses[name_s][target_s] = loss
 

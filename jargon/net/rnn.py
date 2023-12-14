@@ -53,7 +53,7 @@ class RNN(nn.Module):
         self.cell_type = cell_type
         self.cell_args = cell_args or {}
 
-        self.cells = cell_type(  # type: ignore
+        self.cells = cell_type(
             input_dim,
             hidden_size,
             num_layers,
