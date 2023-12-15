@@ -21,7 +21,9 @@ class ImitationLoss:
         self.imitation_triggers = imitation_triggers or {}
         self.imitation_threshold = imitation_threshold
 
-    def sender_imitation_losses(self, batch: Batch) -> Dict[str, Dict[str, Tensor]]:
+    def sender_imitation_losses(
+        self, batch: Batch, imitation_threshold: float
+    ) -> Dict[str, Dict[str, Tensor]]:
         # [batch, num_attrs; int]
         input = batch.get_tensor("input")
         # [batch, num_attrs; int]
@@ -42,10 +44,12 @@ class ImitationLoss:
                     mask = output == target
                     trigger_list.append(mask)
 
+                # [batch, num_attrs * num_triggers; bool]
+                trigger = torch.cat(trigger_list, dim=-1)
                 # [batch; float]
-                trigger = torch.cat(trigger_list, dim=-1).float().mean(dim=-1)
+                trigger = trigger.float().mean(dim=-1)
                 # [batch; bool]
-                trigger = (trigger >= self.imitation_threshold).float()
+                trigger = (trigger >= imitation_threshold).float()
 
                 # [batch, max_len; int]
                 tgt_message = messages.get_tensor(target_s)
@@ -68,7 +72,7 @@ class ImitationLoss:
 
     def __call__(self, batch: Batch) -> Tensor:
         loss_total = self.loss(batch)
-        loss_imi = self.sender_imitation_losses(batch)
+        loss_imi = self.sender_imitation_losses(batch, self.imitation_threshold)
         for losses in loss_imi.values():
             for loss in losses.values():
                 loss_total += loss
@@ -77,7 +81,7 @@ class ImitationLoss:
 
     def metrics(self, batch: Batch) -> Dict[str, float]:
         metrics = self.loss.metrics(batch)
-        sender_imitation_losses = self.sender_imitation_losses(batch)
+        sender_imitation_losses = self.sender_imitation_losses(batch, -1.0)
 
         for name_s1, losses in sender_imitation_losses.items():
             for name_s2, loss in losses.items():
