@@ -1,8 +1,6 @@
 from typing import Any, Dict, Tuple, Type
 
-import torch
 from torch import Tensor, nn
-from torch.distributions import Categorical
 
 
 class RNN(nn.Module):
@@ -57,7 +55,7 @@ class RNN(nn.Module):
             input_dim,
             hidden_size,
             num_layers,
-            bidirectional=bidirectional,
+            bidirectional=bool(bidirectional),
             dropout=dropout,
             batch_first=True,
             **self.cell_args
