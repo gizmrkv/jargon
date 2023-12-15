@@ -15,7 +15,7 @@ def train_imitation_basic(
     max_len: int = 8,
     num_senders: int = 3,
     num_receivers: int = 1,
-    adaptation_graph_type: str = "fully",
+    network_type: str = "fully",
     imitation_graph_type: str = "fully",
     sender_input_embedding_dim: int = 16,
     sender_output_embedding_dim: int = 16,
@@ -72,19 +72,19 @@ def train_imitation_basic(
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
 
-    network = {s: {r for r in receivers} for s in senders}
-
-    if adaptation_graph_type == "fully":
+    if network_type == "fully":
+        network = {s: {r for r in receivers} for s in senders}
         adaptation_targets = {s: {r for r in receivers} for s in senders}
         adaptation_targets |= {r: {s for s in senders} for r in receivers}
-    elif adaptation_graph_type == "individual":
+    elif network_type == "individual":
         assert (
             num_senders == num_receivers
         ), "Individual adaptation requires equal numbers of senders and receivers"
+        network = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
         adaptation_targets = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
         adaptation_targets |= {f"R{i}": {f"S{i}"} for i in range(num_receivers)}
     else:
-        raise ValueError(f"Unknown adaptation graph type {adaptation_graph_type}")
+        raise ValueError(f"Unknown adaptation graph type {network_type}")
 
     if imitation_graph_type == "fully":
         imitation_triggers = {s: {r for r in receivers} for s in senders}
@@ -93,24 +93,24 @@ def train_imitation_basic(
         imitation_triggers = {s: {r for r in receivers} for s in senders}
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders - 1):
-            imitation_targets[f"S{i}"] = {f"S{i+1}"}
+            imitation_targets[f"S{i}"].add(f"S{i+1}")
     elif imitation_graph_type == "oneway2":
         imitation_triggers = {s: {r for r in receivers} for s in senders}
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders - 1):
-            imitation_targets[f"S{i}"] = {f"S{i+1}"}
-            imitation_targets[f"S{i+1}"] = {f"S{i}"}
+            imitation_targets[f"S{i}"].add(f"S{i+1}")
+            imitation_targets[f"S{i+1}"].add(f"S{i}")
     elif imitation_graph_type == "ring":
         imitation_triggers = {s: {r for r in receivers} for s in senders}
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders):
-            imitation_targets[f"S{i}"] = {f"S{(i+1)%num_senders}"}
+            imitation_targets[f"S{i}"].add(f"S{(i+1)%num_senders}")
     elif imitation_graph_type == "ring2":
         imitation_triggers = {s: {r for r in receivers} for s in senders}
         imitation_targets = {s: set() for s in senders}
         for i in range(num_senders):
-            imitation_targets[f"S{i}"] = {f"S{(i+1)%num_senders}"}
-            imitation_targets[f"S{(i+1)%num_senders}"] = {f"S{i}"}
+            imitation_targets[f"S{i}"].add(f"S{(i+1)%num_senders}")
+            imitation_targets[f"S{(i+1)%num_senders}"].add(f"S{i}")
     elif imitation_graph_type == "none":
         imitation_triggers = {s: set() for s in senders}
         imitation_targets = {s: set() for s in senders}
