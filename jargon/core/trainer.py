@@ -78,9 +78,8 @@ class Trainer:
             use_amp = False
 
         self.use_amp = use_amp
-        self.amp = torch.cuda.amp if torch.cuda.is_available() else torch.cpu.amp
+        self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
         self.scaler = torch.cuda.amp.GradScaler() if use_amp else DummyGradScaler()
-        self.dtype = torch.float16 if torch.cuda.is_available() else torch.bfloat16
 
     def run(self) -> Tuple[int, float]:
         """Run the training loop.
@@ -106,7 +105,8 @@ class Trainer:
                 self.epoch_begin_fn(epoch)
 
             for data in self.dataloader:
-                with self.amp.autocast(enabled=self.use_amp, dtype=self.dtype):
+                self.optim.zero_grad()
+                with torch.autocast(self.device_type, enabled=bool(self.use_amp)):
                     batch: Batch = self._call_model(data)
                     loss = self.loss_fn(batch)
                     losses.append(loss)
