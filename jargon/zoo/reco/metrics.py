@@ -26,8 +26,8 @@ class Metrics:
 
         metrics = {
             "acc/comp.mean": acc_comp.mean().item(),
-            "acc/comp.std": acc_comp.std().item(),
             "acc/part.mean": acc_part.mean().item(),
-            "acc/part.std": acc_part.std().item(),
+            # "acc/comp.std": acc_comp.std().item(),
+            # "acc/part.std": acc_part.std().item(),
         }
         return metrics

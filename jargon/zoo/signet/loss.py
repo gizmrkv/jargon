@@ -222,33 +222,33 @@ class Loss:
             for name_r, loss in losses.items():
                 metrics |= {
                     f"loss/com.{name_s}->{name_r}.mean": loss.mean().item(),
-                    f"loss/com.{name_s}->{name_r}.std": loss.std().item(),
+                    # f"loss/com.{name_s}->{name_r}.std": loss.std().item(),
                 }
 
         for name_s, loss in sender_communication_losses.items():
             metrics |= {
                 f"loss/com.{name_s}.mean": loss.mean().item(),
-                f"loss/com.{name_s}.std": loss.std().item(),
+                # f"loss/com.{name_s}.std": loss.std().item(),
             }
         for name_s, loss in sender_entropy_losses.items():
             metrics |= {
                 f"loss/ent.{name_s}.mean": loss.mean().item(),
-                f"loss/ent.{name_s}.std": loss.std().item(),
+                # f"loss/ent.{name_s}.std": loss.std().item(),
             }
         for name_s, loss in sender_length_losses.items():
             metrics |= {
                 f"loss/len.{name_s}.mean": loss.mean().item(),
-                f"loss/len.{name_s}.std": loss.std().item(),
+                # f"loss/len.{name_s}.std": loss.std().item(),
             }
         for name_s, loss in sender_losses.items():
             metrics |= {
                 f"loss/{name_s}.mean": loss.mean().item(),
-                f"loss/{name_s}.std": loss.std().item(),
+                # f"loss/{name_s}.std": loss.std().item(),
             }
         for name_r, loss in receiver_losses.items():
             metrics |= {
                 f"loss/{name_r}.mean": loss.mean().item(),
-                f"loss/{name_r}.std": loss.std().item(),
+                # f"loss/{name_r}.std": loss.std().item(),
             }
 
         return metrics

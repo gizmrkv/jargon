@@ -87,7 +87,7 @@ class ImitationLoss:
             for name_s2, loss in losses.items():
                 metrics |= {
                     f"loss/imi.{name_s1}->{name_s2}.mean": loss.mean().item(),
-                    f"loss/imi.{name_s1}->{name_s2}.std": loss.std().item(),
+                    # f"loss/imi.{name_s1}->{name_s2}.std": loss.std().item(),
                 }
 
         return metrics

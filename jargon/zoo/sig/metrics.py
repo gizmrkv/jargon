@@ -60,14 +60,14 @@ class Metrics:
 
         return {
             "acc/comp.mean": acc_comp.mean().item(),
-            "acc/comp.std": acc_comp.std().item(),
             "acc/part.mean": acc_part.mean().item(),
-            "acc/part.std": acc_part.std().item(),
             "msg/entropy.mean": entropy_s.mean().item(),
-            "msg/entropy.std": entropy_s.std().item(),
             "msg/length.mean": msg_length.mean().item(),
-            "msg/length.std": msg_length.std().item(),
             "msg/unique": unique,
+            # "acc/comp.std": acc_comp.std().item(),
+            # "acc/part.std": acc_part.std().item(),
+            # "msg/entropy.std": entropy_s.std().item(),
+            # "msg/length.std": msg_length.std().item(),
         }
 
     def heavy_test(self, batch: Batch) -> Dict[str, Any]:

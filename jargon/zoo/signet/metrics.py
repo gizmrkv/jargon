@@ -108,9 +108,9 @@ def accuracy_metrics(batch: Batch) -> Dict[str, float]:
             acc_part = acc_flag.float()
             metrics |= {
                 f"acc/comp.{name_s}->{name_r}.mean": acc_comp.mean().item(),
-                f"acc/comp.{name_s}->{name_r}.std": acc_comp.std().item(),
                 f"acc/part.{name_s}->{name_r}.mean": acc_part.mean().item(),
-                f"acc/part.{name_s}->{name_r}.std": acc_part.std().item(),
+                # f"acc/comp.{name_s}->{name_r}.std": acc_comp.std().item(),
+                # f"acc/part.{name_s}->{name_r}.std": acc_part.std().item(),
             }
 
     for name in ["comp", "part"]:
@@ -159,10 +159,10 @@ def message_metrics(batch: Batch, vocab_size: int, max_len: int) -> Dict[str, fl
 
         metrics |= {
             f"msg/entropy.{name_s}.mean": entropy.mean().item(),
-            f"msg/entropy.{name_s}.std": entropy.std().item(),
             f"msg/length.{name_s}.mean": msg_length.mean().item(),
-            f"msg/length.{name_s}.std": msg_length.std().item(),
             f"msg/unique.{name_s}": unique,
+            # f"msg/entropy.{name_s}.std": entropy.std().item(),
+            # f"msg/length.{name_s}.std": msg_length.std().item(),
         }
 
     for name in ["entropy", "length"]:
@@ -268,7 +268,7 @@ class LanguageMetrics:
         for d in self.langs_dir.values():
             os.makedirs(d, exist_ok=True)
 
-    def __call__(self, batch: Batch, epoch: int) -> Dict[str, float]:
+    def __call__(self, batch: Batch, epoch: int) -> None:
         input = batch.get_tensor("input")
         messages = batch.get_batch("messages")
 

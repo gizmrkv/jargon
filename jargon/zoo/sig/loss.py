@@ -132,13 +132,13 @@ class Loss:
 
         return {
             "loss/total.mean": loss.mean().item(),
-            "loss/total.std": loss.std().item(),
             "loss/receiver.mean": loss_r.mean().item(),
-            "loss/receiver.std": loss_r.std().item(),
             "loss/sender.mean": loss_s.mean().item(),
-            "loss/sender.std": loss_s.std().item(),
             "loss/entropy.mean": loss_ent.mean().item(),
-            "loss/entropy.std": loss_ent.std().item(),
             "loss/length.mean": loss_len.mean().item(),
-            "loss/length.std": loss_len.std().item(),
+            # "loss/total.std": loss.std().item(),
+            # "loss/receiver.std": loss_r.std().item(),
+            # "loss/sender.std": loss_s.std().item(),
+            # "loss/entropy.std": loss_ent.std().item(),
+            # "loss/length.std": loss_len.std().item(),
         }
