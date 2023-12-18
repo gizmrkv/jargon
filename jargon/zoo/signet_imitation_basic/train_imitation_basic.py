@@ -69,6 +69,10 @@ def train_imitation_basic(
         attention_dropout=receiver_attention_dropout,
     )
 
+    if network_type == "individual" and num_senders != num_receivers:
+        num_receivers = num_senders
+        print(f"Setting num_receivers to {num_senders} for individual adaptation")
+
     senders = {f"S{i}": deepcopy(sender) for i in range(num_senders)}
     receivers = {f"R{i}": deepcopy(receiver) for i in range(num_receivers)}
 
@@ -77,9 +81,6 @@ def train_imitation_basic(
         adaptation_targets = {s: {r for r in receivers} for s in senders}
         adaptation_targets |= {r: {s for s in senders} for r in receivers}
     elif network_type == "individual":
-        assert (
-            num_senders == num_receivers
-        ), "Individual adaptation requires equal numbers of senders and receivers"
         network = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
         adaptation_targets = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
         adaptation_targets |= {f"R{i}": {f"S{i}"} for i in range(num_receivers)}
