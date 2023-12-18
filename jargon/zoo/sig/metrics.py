@@ -45,7 +45,7 @@ class Metrics:
         # [batch; float]
         acc_comp = acc_flag.all(-1).float()
         # [batch; float]
-        acc_part = acc_flag.mean(-1).float()
+        acc_part = acc_flag.float().mean(-1)
 
         distr_s = Categorical(
             logits=msg_logits.reshape(-1, self.max_len, self.vocab_size)

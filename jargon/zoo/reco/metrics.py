@@ -22,7 +22,7 @@ class Metrics:
         # [batch; float]
         acc_comp = acc_flag.all(-1).float()
         # [batch; float]
-        acc_part = acc_flag.mean(-1).float()
+        acc_part = acc_flag.float().mean(-1)
 
         metrics = {
             "acc/comp.mean": acc_comp.mean().item(),
