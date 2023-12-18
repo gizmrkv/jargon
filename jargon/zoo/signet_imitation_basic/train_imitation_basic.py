@@ -83,6 +83,20 @@ def train_imitation_basic(
         network = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
         adaptation_targets = {f"S{i}": {f"R{i}"} for i in range(num_senders)}
         adaptation_targets |= {f"R{i}": {f"S{i}"} for i in range(num_receivers)}
+    elif network_type == "line":
+        assert (
+            num_senders == num_receivers
+        ), "Line adaptation requires equal numbers of senders and receivers"
+        network = {s: set() for s in senders}
+        adaptation_targets = {}
+        for i in range(num_senders - 1):
+            network[f"S{i}"].add(f"R{i+1}")
+            network[f"S{i+1}"].add(f"R{i}")
+            adaptation_targets[f"S{i}"] = {f"R{i+1}"}
+            adaptation_targets[f"S{i+1}"] = {f"R{i}"}
+            adaptation_targets[f"R{i}"] = {f"S{i+1}"}
+            adaptation_targets[f"R{i+1}"] = {f"S{i}"}
+
     else:
         raise ValueError(f"Unknown adaptation graph type {network_type}")
 
