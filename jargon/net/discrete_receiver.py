@@ -58,6 +58,7 @@ class DiscreteReceiver(nn.Module):
                     output_dim=num_elems,
                     hidden_sizes=[hidden_size],
                     activation_type=nn.GELU,
+                    normalization_type=nn.LayerNorm,
                 )
                 for _ in range(num_attrs)
             ]
