@@ -69,60 +69,83 @@ class DiscreteSender(nn.Module):
         self, x: Tensor, message: Tensor | None = None
     ) -> Tuple[Tensor, Tensor]:
         batch_size = x.shape[0]
+        # [batch, num_attrs, input_embedding_dim; float]
         input_emb = self.input_embedding(x)
+        # [batch, num_attrs, input_embedding_dim; float]
         attr_emb = self.attr_embedding.unsqueeze(0).repeat(batch_size, 1, 1)
+        # [batch, num_attrs, input_embedding_dim; float]
         input_emb = input_emb + attr_emb
+        # [batch, num_attrs * input_embedding_dim; float]
         input_emb_cat = input_emb.reshape(batch_size, -1)
+        # [batch, hidden_size; float]
         hidden = self.input_linear(input_emb_cat).unsqueeze(0)
 
         if self.num_layers >= 2:
+            # [num_layers, batch, hidden_size; float]
             hidden = torch.cat(
                 [hidden, torch.zeros_like(hidden).repeat(self.num_layers - 1, 1, 1)],
                 dim=0,
             )
 
         if self.peeky:
+            # [num_layers, batch, hidden_size; float]
             hidden0 = hidden
 
         if isinstance(self.rnn.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
         if self.attention:
+            # [batch, num_attrs, hidden_size; float]
             input_src = self.input_to_hidden(input_emb)
 
         length = self.max_len if message is None else message.shape[1]
+        # [batch, 1, output_embedding_dim; float]
         emb = self.sos_embedding.repeat(batch_size, 1).unsqueeze(1)
         symbol_list = []
         logits_list = []
         for i in range(length):
             if self.attention:
+                # [num_layers, batch, hidden_size; float]
                 tgt = hidden[0] if isinstance(self.rnn.cells, nn.LSTM) else hidden
+                # [batch, 1, hidden_size; float]
                 tgt = tgt[-1].unsqueeze(1)
+                # [batch, 1, hidden_size; float]
                 attn, _ = self.attention_layer(tgt, input_src, input_src)
+                # [batch, 1, output_embedding_dim + hidden_size; float]
                 emb = torch.cat([emb, attn], dim=-1)
 
+            # [batch, 1, hidden_size; float], [num_layers, batch, hidden_size; float]
             logits_step, hidden = self.rnn(emb, hidden)
+            # [batch, 1, vocab_size; float]
             logits_step = self.output_linear(logits_step)
 
             if message is not None:
+                # [batch, 1; int]
                 symbol = message[:, i].unsqueeze(1)
             elif self.training:
                 distr = Categorical(logits=logits_step)
+                # [batch, 1; int]
                 symbol = distr.sample()
             else:
+                # [batch, 1; int]
                 symbol = logits_step.argmax(dim=-1)
 
+            # [batch, 1, output_embedding_dim; float]
             emb = self.output_embedding(symbol)
             symbol_list.append(symbol)
             logits_list.append(logits_step)
 
             if self.peeky:
                 if isinstance(self.rnn.cells, nn.LSTM):
+                    # [num_layers, batch, hidden_size; float]
                     hidden[0] = hidden[0] + hidden0
                 else:
+                    # [num_layers, batch, hidden_size; float]
                     hidden = hidden + hidden0
 
+        # [batch, length; int]
         sequence = torch.cat(symbol_list, dim=1)
+        # [batch, length, vocab_size; float]
         logits = torch.cat(logits_list, dim=1)
 
         return sequence, logits
