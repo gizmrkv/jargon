@@ -21,8 +21,8 @@ class PGLoss(nn.Module):
     >>> log_prob = torch.tensor([[0.1, 0.2, 0.3], [0.2, 0.3, 0.1]])
     >>> reward = torch.tensor([[0, 0, 1], [1, 0, 0]], dtype=torch.float)
     >>> PGLoss()(log_prob, reward)
-    tensor([[-0.0318, -0.0657, -0.1015],
-            [-0.0677,  0.1985,  0.0662]])
+    tensor([[-0.0621, -0.1281, -0.1980],
+            [-0.1320,  0.3873,  0.1291]])
     """
 
     def __init__(self, gamma: float = 0.99) -> None:

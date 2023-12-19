@@ -14,6 +14,10 @@ class RNN(nn.Module):
         The size of the hidden state.
     num_layers : int, optional
         The number of layers, by default 1
+    bidirectional : bool, optional
+        Whether the RNN is bidirectional, by default False
+    dropout : float, optional
+        The dropout rate, by default 0.0
     cell_type : Type[nn.Module], optional
         The type of the cell, by default nn.LSTM
     cell_args : Dict[str, Any], optional
@@ -21,6 +25,7 @@ class RNN(nn.Module):
 
     Examples
     --------
+    >>> import torch
     >>> rnn = RNN(32, 64)
     >>> x = torch.randn(100, 10, 32)
     >>> y, _ = rnn(x)
