@@ -1,0 +1,46 @@
+method: "grid"
+project: "jargon"
+name: "signet_imitation_basic_A4_1"
+
+metric:
+  name: "test/acc/part.mean.mean"
+  goal: "maximize"
+
+parameters:
+  use_amp:
+    value: 1
+  seed:
+    min: 0
+    max: 4
+  max_epochs:
+    value: 10000
+  num_elems:
+    values: [6, 5, 4, 3, 2]
+  num_attrs:
+    value: 4
+  vocab_size:
+    value: 50
+  max_len:
+    value: 10
+  entropy_loss_weight:
+    values: [0.0, 0.1, 0.2, 0.3, 0.4]
+  length_loss_weight:
+    value: 0.0
+  imitation:
+    value: 1
+  imitation_threshold:
+    values: [2, -0.1, 0.24, 0.49, 0.74, 0.99]
+  num_senders:
+    value: 6
+  network_type:
+    value: "individual"
+  imitation_graph_type:
+    values: ["oneway2", "ring2"]
+  sender_hidden_size:
+    values: [200, 100, 50, 25]
+  sender_num_layers:
+    value: 1
+  receiver_hidden_size:
+    values: [200, 100, 50, 25]
+  receiver_num_layers:
+    value: 1
