@@ -4,7 +4,6 @@ import torch
 from torch import Tensor, nn
 from torch.distributions import Categorical
 
-from .attention import ScaledDotProductAttention
 from .onehotify import Onehotify
 from .rnn import RNN
 
@@ -24,9 +23,6 @@ class DiscreteSender(nn.Module):
         cell_type: Type[nn.Module] | str = nn.LSTM,
         cell_args: Dict[str, Any] | None = None,
         peeky: bool = False,
-        attention: bool = False,
-        attention_weight: bool = False,
-        attention_dropout: float = 0.0,
     ) -> None:
         super().__init__()
         self.num_elems = num_elems
@@ -41,9 +37,6 @@ class DiscreteSender(nn.Module):
         self.cell_type = cell_type
         self.cell_args = cell_args
         self.peeky = peeky
-        self.attention = attention
-        self.attention_weight = attention_weight
-        self.attention_dropout = attention_dropout
 
         if input_embedding_dim is None:
             self.input_embedding = Onehotify(num_elems)
@@ -55,11 +48,8 @@ class DiscreteSender(nn.Module):
         else:
             self.output_embedding = nn.Embedding(vocab_size, output_embedding_dim)
 
-        self.rnn_input_dim = self.output_embedding_dim + (
-            hidden_size if attention else 0
-        )
         self.rnn = RNN(
-            input_dim=self.rnn_input_dim,
+            input_dim=self.output_embedding_dim,
             hidden_size=hidden_size,
             num_layers=num_layers,
             dropout=dropout,
@@ -69,12 +59,6 @@ class DiscreteSender(nn.Module):
         self.input_linear = nn.Linear(self.input_embedding_dim * num_attrs, hidden_size)
         self.output_linear = nn.Linear(hidden_size, vocab_size)
         self.sos_embedding = nn.Parameter(torch.randn(self.output_embedding_dim))
-
-        if attention:
-            self.attention_layer = ScaledDotProductAttention(
-                hidden_size, attention_dropout, attention_weight
-            )
-            self.input_to_hidden = nn.Linear(self.input_embedding_dim, hidden_size)
 
     def forward(
         self, x: Tensor, message: Tensor | None = None
@@ -101,26 +85,12 @@ class DiscreteSender(nn.Module):
         if isinstance(self.rnn.cells, nn.LSTM):
             hidden = (hidden, torch.zeros_like(hidden))
 
-        if self.attention:
-            # [batch, num_attrs, hidden_size; float]
-            input_src = self.input_to_hidden(input_emb)
-
         length = self.max_len if message is None else message.shape[1]
         # [batch, 1, output_embedding_dim; float]
         emb = self.sos_embedding.repeat(batch_size, 1).unsqueeze(1)
         symbol_list = []
         logits_list = []
         for i in range(length):
-            if self.attention:
-                # [num_layers, batch, hidden_size; float]
-                tgt = hidden[0] if isinstance(self.rnn.cells, nn.LSTM) else hidden
-                # [batch, 1, hidden_size; float]
-                tgt = tgt[-1].unsqueeze(1)
-                # [batch, 1, hidden_size; float]
-                attn, _ = self.attention_layer(tgt, input_src, input_src)
-                # [batch, 1, output_embedding_dim + hidden_size; float]
-                emb = torch.cat([emb, attn], dim=-1)
-
             # [batch, 1, hidden_size; float], [num_layers, batch, hidden_size; float]
             logits_step, hidden = self.rnn(emb, hidden)
             # [batch, 1, vocab_size; float]

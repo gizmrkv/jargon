@@ -24,18 +24,12 @@ def train_imitation_basic(
     sender_cell_type: Type[nn.Module] | str = nn.GRU,
     sender_cell_args: Dict[str, Any] | None = None,
     sender_peeky: bool = False,
-    sender_attention: bool = False,
-    sender_attention_weight: bool = False,
-    sender_attention_dropout: float = 0.0,
     receiver_embedding_dim: int | None = None,
     receiver_hidden_size: int = 200,
     receiver_num_layers: int = 1,
     receiver_bidirectional: bool = False,
     receiver_cell_type: Type[nn.Module] | str = nn.GRU,
     receiver_cell_args: Dict[str, Any] | None = None,
-    receiver_attention: bool = False,
-    receiver_attention_weight: bool = False,
-    receiver_attention_dropout: float = 0.0,
     **train_args: Any,
 ) -> None:
     sender = DiscreteSender(
@@ -50,9 +44,6 @@ def train_imitation_basic(
         cell_type=sender_cell_type,
         cell_args=sender_cell_args,
         peeky=sender_peeky,
-        attention=sender_attention,
-        attention_weight=sender_attention_weight,
-        attention_dropout=sender_attention_dropout,
     )
     receiver = DiscreteReceiver(
         num_elems=num_elems,
@@ -64,9 +55,6 @@ def train_imitation_basic(
         bidirectional=receiver_bidirectional,
         cell_type=receiver_cell_type,
         cell_args=receiver_cell_args,
-        attention=receiver_attention,
-        attention_weight=receiver_attention_weight,
-        attention_dropout=receiver_attention_dropout,
     )
 
     if network_type == "individual" and num_senders != num_receivers:
