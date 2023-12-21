@@ -48,40 +48,39 @@ class DiscreteReceiver(nn.Module):
             cell_type=cell_type,
             cell_args=cell_args,
         )
-        self.output_layers = nn.ModuleList(
-            [
-                MLP(
-                    input_dim=hidden_size,
-                    output_dim=num_elems,
-                    hidden_sizes=[hidden_size],
-                    activation_type=nn.GELU,
-                    normalization_type=nn.LayerNorm,
-                )
-                for _ in range(num_attrs)
-            ]
+        self.output_layer = MLP(
+            input_dim=hidden_size,
+            output_dim=num_attrs * num_elems,
+            hidden_sizes=[hidden_size],
+            activation_type=nn.GELU,
+            normalization_type=nn.LayerNorm,
         )
 
     def forward(self, x: Tensor) -> Tensor:
+        # [batch, max_len, embedding_dim; float]
         emb = self.embedding(x)
+        # [batch, max_len, hidden_size * (bidirectional + 1); float]
         outputs, _ = self.rnn(emb)
 
         if self.bidirectional:
+            # [batch, max_len, hidden_size; float]
             outputs = (
                 outputs[:, :, : self.hidden_size] + outputs[:, :, self.hidden_size :]
             )
 
+        # [batch, hidden_size; float]
         output = outputs.sum(dim=1)
-        output = output.unsqueeze(1).repeat(1, self.num_attrs, 1)
-
-        logits_list = [
-            layer(output[:, i, :]) for i, layer in enumerate(self.output_layers)
-        ]
-        logits = torch.stack(logits_list, dim=1)
+        # [batch, num_attrs * num_elems; float]
+        logits = self.output_layer(output)
+        # [batch, num_attrs, num_elems; float]
+        logits = logits.reshape(-1, self.num_attrs, self.num_elems)
 
         if self.training:
             distr = Categorical(logits=logits)
+            # [batch, num_attrs; int]
             output = distr.sample()
         else:
+            # [batch, num_attrs; int]
             output = logits.argmax(dim=-1)
 
         return output, logits
