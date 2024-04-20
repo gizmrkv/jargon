@@ -1,0 +1,13 @@
+{
+    "cSpell.words": [
+        "arange",
+        "optim",
+        "pbar",
+        "peeky",
+        "randn",
+        "torchdict",
+        "tqdm",
+        "unsqueeze",
+        "wandb"
+    ]
+}
