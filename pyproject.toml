@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "jargon"
+version = "0.1.0"
+description = ""
+authors = ["gizmrkv <gizmrkv@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.26.4"
+torch = "^2.2.2"
+rapidfuzz = "^3.8.1"
+scipy = "^1.13.0"
+seaborn = "^0.13.2"
+matplotlib = "^3.8.4"
+toml = "^0.10.2"
+pyyaml = "^6.0.1"
+tqdm = "^4.66.2"
+wandb = "^0.16.6"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
