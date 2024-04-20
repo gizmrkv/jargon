@@ -17,6 +17,7 @@ toml = "^0.10.2"
 pyyaml = "^6.0.1"
 tqdm = "^4.66.2"
 wandb = "^0.16.6"
+numba = "^0.59.1"
 
 
 [tool.poetry.group.dev.dependencies]
