@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Callable, List
 
+from jargon.envs import Environment
 from jargon.logger import Logger
 from jargon.utils import torchdict
 from jargon.utils.torchdict import TensorDict
@@ -10,27 +11,29 @@ from .callback import Callback
 
 class MetricsCallback(Callback):
     def __init__(
-        self, metrics: Callable[[TensorDict], TensorDict], loggers: List[Logger]
+        self,
+        env: Environment,
+        metrics: Callable[[TensorDict], TensorDict],
+        loggers: List[Logger],
+        interval: int = 1,
     ):
+        self.env = env
         self.metrics = metrics
         self.loggers = loggers
-
-    def on_epoch_begin(self, epoch: int, log_dir: Path):
-        self.metrics_list = []
-        self.losses_list = []
-
-    def on_batch_end(self, epoch: int, batches: TensorDict, losses: TensorDict):
-        self.metrics_list.append(self.metrics(batches))
-        self.losses_list.append(losses)
+        self.interval = interval
 
     def on_epoch_end(self, epoch: int, log_dir: Path):
-        metrics = torchdict.stack(self.metrics_list)
-        metrics = metrics.apply(lambda x: x.mean())
-        losses = torchdict.stack(self.losses_list)
-        losses = losses.apply(lambda x: x.mean())
+        if epoch % self.interval != 0:
+            return
 
-        metrics_dict = {f"metric/{k}": v.item() for k, v in metrics.flatten().items()}  # type: ignore
-        losses_dict = {f"loss/{k}": v.item() for k, v in losses.flatten().items()}  # type: ignore
+        metrics = {}
+        for mode in self.env.modes:
+            self.env.mode = mode
+            met = [self.metrics(batches) for batches in self.env.rollout()]
+            met = torchdict.stack(met)
+            met = met.apply(lambda m: m.mean())
+            met = {f"{mode}/{k}": v.item() for k, v in met.flatten("/").items()}  # type: ignore
+            metrics |= met
 
         for logger in self.loggers:
-            logger.log(epoch, metrics_dict | losses_dict)
+            logger.log(epoch, metrics)

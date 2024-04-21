@@ -35,6 +35,9 @@ class AutoencoderEnv(Environment):
         self.device = device
         self.mode = mode
 
+        self.agents = {"encoder", "decoder"}
+        self.modes = {"train", "test"}
+
         self.dataset = (
             torch.Tensor(list(product(torch.arange(vocab_size), repeat=seq_length)))
             .long()

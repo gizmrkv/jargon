@@ -9,6 +9,9 @@ from jargon.utils.torchdict import TensorDict
 class Environment(ABC, nn.Module):
     agents: Set[str]
 
+    modes: Set[str]
+    mode: str
+
     @abstractmethod
     def rollout(self) -> Iterator[TensorDict]:
         pass

@@ -108,7 +108,7 @@ class Trainer:
 
                 if self.stopper.step(sum(loss_list) / len(loss_list)):
                     for callback in self.callbacks.values():
-                        callback.on_early_end(epoch)
+                        callback.on_early_end(epoch, epoch_log_dir)
 
                     break
 

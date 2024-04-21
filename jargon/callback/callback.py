@@ -20,7 +20,7 @@ class Callback(ABC):
     def on_epoch_end(self, epoch: int, log_dir: Path):
         pass
 
-    def on_early_end(self, epoch: int):
+    def on_early_end(self, epoch: int, log_dir: Path):
         pass
 
     def on_train_end(self, log_dir: Path):

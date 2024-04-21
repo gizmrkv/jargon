@@ -88,7 +88,7 @@ def run_autoencoder(
         return TensorDict(acc=acc)
 
     loggers = [WandBLogger(project="jargon"), DuplicateChecker()]
-    callbacks = {"metrics": MetricsCallback(metrics, loggers)}
+    callbacks = {"metrics": MetricsCallback(env, metrics, loggers, interval=5)}
     stopper = MinMaxEarlyStopper(0.001, 10)
     trainer = Trainer(
         env,
