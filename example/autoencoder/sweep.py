@@ -6,7 +6,7 @@ from torch import nn, optim
 from jargon.callback import MetricsCallback
 from jargon.core import Trainer
 from jargon.envs import AutoencoderEnv
-from jargon.logger import DuplicateChecker, WandBLogger
+from jargon.logger import DuplicateChecker, WandBLogger, wandb_sweep
 from jargon.loss import LossSelector, TextCrossEntropyLoss
 from jargon.net import RecurrentDecoder, RecurrentEncoder, RecurrentNet
 from jargon.stopper import MinMaxEarlyStopper
@@ -14,7 +14,7 @@ from jargon.utils import fix_seed, init_weights
 from jargon.utils.torchdict import TensorDict
 
 
-def run_autoencoder(
+def train_autoencoder(
     epochs: int,
     vocab_size: int,
     seq_length: int,
@@ -35,8 +35,11 @@ def run_autoencoder(
     decoder_train_temp: float = 1.0,
     decoder_eval_temp: float = 1e-5,
     decoder_peeky: bool = False,
+    stopper_threshold: float = 1e-6,
+    stopper_window_size: int = 10,
     lr: float = 1e-3,
     seed: Optional[int] = None,
+    wandb_logger: Optional[WandBLogger] = None,
 ):
     if seed is not None:
         fix_seed(seed)
@@ -47,9 +50,9 @@ def run_autoencoder(
             encoder_embed_size,
             encoder_hidden_size,
             num_layers=encoder_num_layers,
-            bias=encoder_bias,
+            bias=bool(encoder_bias),
             dropout=encoder_dropout,
-            bidirectional=encoder_bidirectional,
+            bidirectional=bool(encoder_bidirectional),
             rnn_type=rnn_types[encoder_rnn_type],
         ),
         vocab_size=vocab_size,
@@ -60,7 +63,7 @@ def run_autoencoder(
             decoder_embed_size,
             decoder_hidden_size,
             num_layers=decoder_num_layers,
-            bias=decoder_bias,
+            bias=bool(decoder_bias),
             dropout=decoder_dropout,
             rnn_type=rnn_types[decoder_rnn_type],
         ),
@@ -69,7 +72,7 @@ def run_autoencoder(
         seq_length=seq_length,
         train_temp=decoder_train_temp,
         eval_temp=decoder_eval_temp,
-        peeky=decoder_peeky,
+        peeky=bool(decoder_peeky),
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     env = AutoencoderEnv(
@@ -87,9 +90,12 @@ def run_autoencoder(
         acc = (input == output).float().mean()
         return TensorDict(acc=acc)
 
-    loggers = [WandBLogger(project="jargon"), DuplicateChecker()]
+    loggers = [DuplicateChecker()]
+    if wandb_logger is not None:
+        loggers.append(wandb_logger)
+
     callbacks = {"metrics": MetricsCallback(env, metrics, loggers, interval=5)}
-    stopper = MinMaxEarlyStopper(0.001, 10)
+    stopper = MinMaxEarlyStopper(stopper_threshold, stopper_window_size)
     trainer = Trainer(
         env,
         loss_selector,
@@ -102,13 +108,4 @@ def run_autoencoder(
 
 
 if __name__ == "__main__":
-    run_autoencoder(
-        epochs=10000,
-        vocab_size=20,
-        seq_length=2,
-        batch_size=1024,
-        encoder_embed_size=32,
-        encoder_hidden_size=64,
-        decoder_embed_size=32,
-        decoder_hidden_size=64,
-    )
+    wandb_sweep(train_autoencoder)

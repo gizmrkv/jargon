@@ -1,0 +1,52 @@
+method: bayes
+
+metric:
+  name: test/acc
+  goal: "maximize"
+
+parameters:
+  encoder_num_layers:
+    values: [1, 2]
+  decoder_num_layers:
+    values: [1, 2]
+  encoder_bias:
+    values: [0, 1]
+  decoder_bias:
+    values: [0, 1]
+  encoder_dropout:
+    min: 0.0
+    max: 1.0
+  decoder_dropout:
+    min: 0.0
+    max: 1.0
+  encoder_bidirectional:
+    values: [0, 1]
+  encoder_rnn_type:
+    values: ["rnn", "lstm", "gru"]
+  decoder_rnn_type:
+    values: ["rnn", "lstm", "gru"]
+  decoder_train_temp:
+    min: 0.0
+    max: 4.0
+  decoder_peeky:
+    values: [0, 1]
+  lr:
+    min: 0.0001
+    max: 0.001
+
+  epochs:
+    value: 2000
+  vocab_size:
+    value: 20
+  seq_length:
+    value: 3
+  batch_size:
+    value: 1024
+  encoder_embed_size:
+    value: 32
+  encoder_hidden_size:
+    value: 64
+  decoder_embed_size:
+    value: 32
+  decoder_hidden_size:
+    value: 64

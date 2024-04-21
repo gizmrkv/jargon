@@ -1,0 +1,27 @@
+method: grid
+
+metric:
+  name: test/acc
+  goal: "maximize"
+
+parameters:
+  seed:
+    min: 0
+    max: 9
+
+  epochs:
+    value: 10000
+  vocab_size:
+    value: 20
+  seq_length:
+    value: 2
+  batch_size:
+    value: 1024
+  encoder_embed_size:
+    value: 32
+  encoder_hidden_size:
+    value: 64
+  decoder_embed_size:
+    value: 32
+  decoder_hidden_size:
+    value: 64

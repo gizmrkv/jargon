@@ -1,4 +1,3 @@
-import datetime
 import os
 import random
 from pathlib import Path
@@ -14,6 +13,7 @@ from jargon.envs import Environment
 from jargon.logger import Logger
 from jargon.loss import LossSelector
 from jargon.stopper import DummyEarlyStopper, EarlyStopper
+from jargon.utils import date_to_str
 
 
 class Trainer:
@@ -29,6 +29,7 @@ class Trainer:
         checkpoint_path: Optional[Path] = None,
         loss_max_norm: float = 0.5,
         use_tqdm: bool = True,
+        trainer_name: Optional[str] = None,
     ):
         self.env = env
         self.loss_selector = loss_selector
@@ -40,12 +41,11 @@ class Trainer:
         self.checkpoint_path = checkpoint_path
         self.loss_max_norm = loss_max_norm
         self.use_tqdm = use_tqdm
+        self.trainer_name = trainer_name or date_to_str()
 
         assert checkpoint_interval is None or checkpoint_interval >= 1
 
-        dt = datetime.datetime.now()
-        self.run_name = dt.strftime("%Y-%m-%d %H-%M-%S-%f")
-        self.log_dir = Path(f"logs/{self.run_name}")
+        self.log_dir = Path(f"logs/{self.trainer_name}")
         os.makedirs(self.log_dir, exist_ok=True)
 
         if checkpoint_path is not None:
@@ -54,9 +54,6 @@ class Trainer:
     def train(self, epochs: int):
         if epochs % 10 == 0:
             epochs += 1
-
-        for logger in self.loggers:
-            logger.begin(self.run_name)
 
         train_begin_log_dir = self.log_dir / "begin"
         for name, callback in self.callbacks.items():

@@ -1,19 +1,15 @@
-from typing import Any, Dict
+import argparse
+from typing import Any, Callable, Dict
 
 import wandb
+from jargon.utils import date_to_str, read_config
 
 from .logger import Logger
 
 
 class WandBLogger(Logger):
     def __init__(self, **wandb_config: Any) -> None:
-        self.wandb_config = wandb_config
-
-    def begin(self, run_name: str):
-        if "name" not in self.wandb_config:
-            self.wandb_config["name"] = run_name
-
-        wandb.init(**self.wandb_config)
+        wandb.init(**wandb_config)
 
     def log(self, epoch: int, metrics: Dict[str, Any], flush: bool = False):
         wandb.log(metrics, step=epoch, commit=flush)
@@ -23,3 +19,23 @@ class WandBLogger(Logger):
 
     def close(self):
         wandb.finish()
+
+
+def wandb_sweep(main: Callable[..., Any]) -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--conf_path", "-c", type=str, default=None)
+    parser.add_argument("--sweep_id", "-s", type=str, default=None)
+    args = parser.parse_args()
+
+    config = read_config(args.conf_path) if args.conf_path else None
+    sweep_id = args.sweep_id
+
+    if sweep_id is None:
+        sweep_id = wandb.sweep(sweep=config)
+
+    def func() -> None:
+        name = date_to_str()
+        wandb_logger = WandBLogger(name=name, project="jargon")
+        main(wandb_logger=wandb_logger, **wandb.config)
+
+    wandb.agent(sweep_id, func)
